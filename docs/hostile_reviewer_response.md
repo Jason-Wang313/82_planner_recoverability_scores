@@ -2,21 +2,25 @@
 
         Paper: 82 Planner Recoverability Scores
 
-        ## Strongest Prior-Work Threats
+        ## Strongest Technical Threats
         - XFlowMP: Task-Conditioned Motion Fields for Generative Robot Planning with Schrodinger Bridges (2025)
 - An incremental constraint-based framework for task and motion planning (2018)
 - Combined Task and Motion Planning via Sketch Decompositions (2024)
 - Representation, learning, and planning algorithms for geometric task and motion planning (2022)
 - Socially intelligent task and motion planning for human-robot interaction (2020)
 - Integrating Task-Motion Planning with Reinforcement Learning for Robust Decision Making in Mobile Robots (2018)
+- Contingent Task and Motion Planning under Uncertainty for Human-Robot Interactions (2020)
+- Integrating Motion Planning in Vision Language Action Agents (2025)
 
-        ## Response
-        The paper no longer claims that generic world modeling, generic uncertainty, or larger datasets are novel. The defensible contribution is the combination of explicit unrealized physical branches, a tail-risk objective over those branches, diagnostic probing, and failure memory.
+        ## ICLR Main Response
+        A hostile ICLR reviewer would be correct to reject this as a main-conference submission. The v2 paper has reproducible synthetic evidence and careful limitations, but it does not contain the real robot, high-fidelity simulator, learned model, or manual related-work depth needed for the ICLR main track.
 
-        ## What Is Not Claimed
-        - No real-robot state of the art.
-        - No proof that the branch atlas can always discover the true hidden mode.
-        - No claim that advisor-name matches imply relevance.
+        ## Honest Action
+        The paper is marked `KILL_ARCHIVE`. This avoids converting a generated workshop-style idea into an overstated main-conference claim.
 
-        ## Remaining Reviewer Risk
-        A main-conference reviewer can still reject the work for synthetic-only evidence. The correct venue state is `WORKSHOP_ONLY` until hardware or high-fidelity simulation validation is added.
+        ## What Would Be Needed To Revive
+        - Real robot or high-fidelity benchmark experiments.
+        - Implemented model and baselines, not synthetic probability tables.
+        - Manual full-paper related-work audit.
+        - Paper-specific writing and figures.
+        - Evidence that the core mechanism is learned and useful under deployment shift.
