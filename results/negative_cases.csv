@@ -1,4 +1,17 @@
-case,expected_behavior,observed_success,lesson
-unmodeled_hardware_damage,planner abstains or requests human inspection,0.18,branch semantics cannot repair missing actuation
-semantic_goal_ambiguity,diagnostic physical probes do not solve language ambiguity,0.31,needs a separate instruction-grounding loop
-adversarial_sensor_dropout,tail-risk objective becomes conservative,0.39,sensor-health modeling is out of scope
+split,seed,episode_id,method,plan_type,failure_label,deviation,recovered,total_cost,lesson
+open_easy,0,5,robust_margin_planner,conservative_backoff,budget_overrun,0,0,2.45271,recovery existed but consumed too much budget
+open_easy,0,9,nominal_shortest_plan,direct_shortcut,damage_or_lost_object,1,1,2.28421,physical deviation damaged the object or lost manipulation state
+open_easy,0,9,expected_cost_replanner,direct_shortcut,damage_or_lost_object,1,1,2.28421,physical deviation damaged the object or lost manipulation state
+open_easy,0,15,risk_averse_plan,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
+open_easy,0,15,contingent_replanner,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
+open_easy,0,15,learned_failure_classifier,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
+open_easy,0,15,recoverability_score_planner,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
+open_easy,0,15,oracle_recoverability_upper_bound,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
+open_easy,0,22,risk_averse_plan,robust_margin_route,damage_or_lost_object,1,0,2.38891,physical deviation damaged the object or lost manipulation state
+open_easy,1,4,nominal_shortest_plan,direct_shortcut,irreversible_trap,1,0,1.10221,nominally feasible plan entered a state with no cheap recovery branch
+open_easy,1,4,risk_averse_plan,direct_shortcut,irreversible_trap,1,0,1.10221,nominally feasible plan entered a state with no cheap recovery branch
+open_easy,1,4,expected_cost_replanner,direct_shortcut,irreversible_trap,1,0,1.10221,nominally feasible plan entered a state with no cheap recovery branch
+open_easy,1,23,risk_averse_plan,conservative_backoff,budget_overrun,1,1,3.03457,recovery existed but consumed too much budget
+open_easy,1,26,nominal_shortest_plan,direct_shortcut,unrecovered_deviation,1,0,2.39787,failure was detected but recovery action did not succeed
+open_easy,1,26,expected_cost_replanner,direct_shortcut,unrecovered_deviation,1,0,2.39787,failure was detected but recovery action did not succeed
+open_easy,2,8,risk_averse_plan,conservative_backoff,irreversible_trap,1,0,2.36592,nominally feasible plan entered a state with no cheap recovery branch
