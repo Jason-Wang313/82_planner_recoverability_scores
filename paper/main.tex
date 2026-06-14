@@ -4,42 +4,150 @@
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{booktabs}
-\title{Planner Recoverability Scores: ICLR Main-Conference Gate Archive}
+\usepackage{graphicx}
+\usepackage{array}
+
+\graphicspath{{../figures/}}
+
+\title{Planner Recoverability Scores Under Physical Deviation:\\A Negative ICLR-Main Evidence Audit}
 \author{Anonymous Authors}
+
 \begin{document}
 \maketitle
+
 \begin{abstract}
-This document is not an ICLR main-conference submission. It is the v3 main-conference gate for a generated robotics draft about task and motion planning. The original research bet was: Score plans by recoverability under physical deviation, not just nominal feasibility. After a stricter hostile review, the honest terminal decision is \textbf{KILL/ARCHIVE}. Submission-hardening version: v3.
+Robotic task-and-motion planners usually score plans by nominal feasibility, expected cost, or static risk. The research bet tested here is that a plan should instead be scored by \emph{recoverability}: when execution deviates because of contact, slip, narrow passages, or hidden irreversible traps, can the robot detect the deviation and return to a goal-achieving branch without excessive cost or damage? We implemented a deterministic, reproducible local benchmark with five held-out physical-shift regimes, eight planners, seven random seeds, 11,760 main rollouts, 2,058 ablation rollouts, and 25,200 stress-rollout evaluations. The resulting evidence is useful but not submission-ready for ICLR main. On the combined hard-shift split, the proposed recoverability-score planner reaches 0.850 goal success, but a learned failure classifier reaches 0.878 and an oracle reaches 0.874. The proposed method only improves over a contingent replanner by 0.0068 paired goal-success points, while also causing more irreversible failures and more damage. Worse, removing the irreversible-trap penalty or failure-probability term improves success. We therefore mark this paper \textbf{KILL/ARCHIVE}, not because the idea is empty, but because the present evidence falsifies the stronger claim and lacks hardware or high-fidelity simulator validation. Submission-hardening version: v4.
 \end{abstract}
 
-\section{Gate Decision}
-The v2 paper was workshop-only. Under the active ICLR-main standard, that is insufficient. The local artifacts contain synthetic multi-seed diagnostics, but no real-robot validation, high-fidelity simulator benchmark, trained world-action model, implemented real baselines, or manual full-paper related-work synthesis. These missing items are not recoverable by editing text or rerunning the synthetic script.
+\section{Terminal Decision}
+\textbf{Decision: KILL/ARCHIVE for ICLR main.} The repository now contains a real executable benchmark, baselines, ablations, stress sweeps, figures, and reproducibility files. However, the empirical story does not support a main-conference robotics submission. The proposed recoverability score is not the best non-oracle method on the hardest split, its advantage over a contingent replanner is statistically small, and its own ablations expose a misspecified objective. The result should be archived as a useful negative study rather than submitted as a positive method paper.
 
-\section{Fatal ICLR-Main Blockers}
+\section{Question}
+The intended claim was:
+\begin{quote}
+Score robot plans by recoverability under physical deviation, not only by nominal feasibility.
+\end{quote}
+That claim is plausible in robotics settings where a short plan can enter an unrecoverable contact state, lose an object, or consume all slack before detecting a deviation. A publishable version would need evidence that a recoverability score changes plan choice in a way that consistently beats strong replanning and learned failure predictors under physically meaningful shifts.
+
+\section{Benchmark}
+We built a local task-and-motion recoverability benchmark with the following structure.
 \begin{itemize}
-\item Evidence is synthetic and generated from a shared batch template.
-\item Baselines are diagnostic probability models, not implemented competing robot systems.
-\item Ablations do not correspond to a trained model checkpoint.
-\item No hardware, high-fidelity benchmark, qualitative rollouts, or failure videos are available.
-\item Related work is based on pool slices and hostile metadata, not a manual full-paper synthesis.
-\item Claims would be misleading if framed as ICLR-main empirical robotics evidence.
+\item \textbf{Episodes.} Each episode contains a hidden deviation profile, a budget, a slip factor, a narrow-passage difficulty, a trap severity, and sensor uncertainty.
+\item \textbf{Candidate plans.} The planner chooses among direct shortcuts, robust-margin routes, contingency branches, diagnostic staging, and conservative backoff plans.
+\item \textbf{Splits.} Evaluation covers open easy tasks, narrow-passage shifts, object-slip shifts, irreversible-commitment tasks, and a combined hard-shift split.
+\item \textbf{Rollout coupling.} For fairness, the same episode-plan pair has the same stochastic physical outcome regardless of which method selects it.
+\item \textbf{Metrics.} We report goal success, recovery success after deviation, irreversible failure, damage, total cost, budget overrun, and calibration error across seven seeds.
+\end{itemize}
+The benchmark is deterministic from source code and writes all CSV files under \texttt{results/}. It is not a real robot benchmark and not a high-fidelity simulator. That limitation is central to the terminal decision.
+
+\section{Methods}
+We compare the proposed score against seven alternatives:
+\begin{itemize}
+\item \textbf{Nominal shortest plan:} chooses the lowest nominal cost.
+\item \textbf{Risk-averse plan:} avoids predicted failure probability.
+\item \textbf{Expected-cost replanner:} optimizes expected physical cost.
+\item \textbf{Robust-margin planner:} prefers geometric slack.
+\item \textbf{Contingent replanner:} values contingency branches and fallback feasibility.
+\item \textbf{Learned failure classifier:} a ridge classifier trained on generated training episodes.
+\item \textbf{Oracle recoverability upper bound:} uses hidden rollout probabilities as a ceiling.
+\item \textbf{Recoverability-score planner:} combines success probability, recovery success, recovery cost, diagnostic value, and irreversible-trap penalties.
 \end{itemize}
 
-\section{Hostile Prior-Work Pressure}
-The closest local hostile records include:
+\section{Main Results}
+Table~\ref{tab:hard} shows the combined hard-shift split. The proposed score is much better than nominal, risk-only, and robust-margin planning. That is the useful part of the archive. But it does not beat the learned failure classifier and it barely beats contingent replanning.
+
+\begin{table}[h]
+\centering
+\caption{Combined hard-shift results over seven seeds. Confidence intervals are 95\% intervals over seed means.}
+\label{tab:hard}
+\begin{tabular}{lrrrr}
+\toprule
+Method & Goal success & Recovery success & Irreversible & Damage \\
+\midrule
+Nominal shortest & $0.588 \pm 0.033$ & $0.049$ & $0.170$ & $0.265$ \\
+Risk-averse & $0.653 \pm 0.056$ & $0.612$ & $0.007$ & $0.031$ \\
+Robust margin & $0.340 \pm 0.047$ & $0.576$ & $0.007$ & $0.048$ \\
+Expected-cost replanner & $0.840 \pm 0.049$ & $0.602$ & $0.017$ & $0.048$ \\
+Contingent replanner & $0.844 \pm 0.041$ & $0.829$ & $0.000$ & $0.010$ \\
+Learned failure classifier & $\mathbf{0.878 \pm 0.041}$ & $\mathbf{0.901}$ & $0.000$ & $\mathbf{0.007}$ \\
+Recoverability score & $0.850 \pm 0.042$ & $0.744$ & $0.007$ & $0.017$ \\
+Oracle upper bound & $0.874 \pm 0.040$ & $0.872$ & $0.000$ & $0.010$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.86\linewidth]{recoverability_success.png}
+\caption{Goal success across evaluation splits. The proposed score is useful on hard splits but does not dominate the learned failure classifier.}
+\label{fig:success}
+\end{figure}
+
+\section{Ablation Results}
+The ablation table is the strongest reason to archive the submission. A well-specified recoverability objective should degrade when central terms are removed. Instead, removing the irreversible-trap penalty and removing the failure-probability term both improve hard-split success.
+
+\begin{table}[h]
+\centering
+\caption{Recoverability-score ablations on the combined hard-shift split.}
+\label{tab:ablation}
+\begin{tabular}{lrrrr}
+\toprule
+Ablation & Goal success & Recovery success & Irreversible & Damage \\
+\midrule
+Full score & $0.850 \pm 0.042$ & $0.744$ & $0.007$ & $0.017$ \\
+Minus recovery success & $0.844 \pm 0.045$ & $0.655$ & $0.007$ & $0.027$ \\
+Minus recovery cost & $0.847 \pm 0.038$ & $0.723$ & $0.007$ & $0.020$ \\
+Minus irreversible-trap penalty & $\mathbf{0.867 \pm 0.041}$ & $\mathbf{0.886}$ & $\mathbf{0.000}$ & $\mathbf{0.010}$ \\
+Minus diagnostic value & $0.837 \pm 0.046$ & $0.593$ & $0.007$ & $0.034$ \\
+Minus failure probability & $0.864 \pm 0.033$ & $0.833$ & $0.003$ & $0.014$ \\
+Risk-only score & $0.687 \pm 0.048$ & $0.588$ & $0.007$ & $0.031$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.86\linewidth]{recoverability_ablation.png}
+\caption{Ablations reveal that two removals improve the proposed method, which blocks a positive method claim.}
+\label{fig:ablation}
+\end{figure}
+
+\section{Stress Tests}
+We also sweep navigation difficulty, slip, trap severity, sensor uncertainty, and a combined stress axis. At maximum combined stress, the recoverability score reaches 0.851 goal success, the learned failure classifier reaches 0.845, and the oracle reaches 0.845. This stress slice is favorable to recoverability scoring, but it is not enough to overturn the main split: the proposed method still has nonzero irreversible failures and does not produce a decisive margin.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.90\linewidth]{recoverability_stress_sweep.png}
+\caption{Stress sweeps across five axes. The benchmark is useful for debugging, but the positive claim is not robust enough for ICLR main.}
+\label{fig:stress}
+\end{figure}
+
+\section{Why This Is Not Submission-Ready}
+The project fails the ICLR-main readiness gate for three independent reasons.
 \begin{itemize}
-\item XFlowMP: Task-Conditioned Motion Fields for Generative Robot Planning with Schrodinger Bridges (2025)
-\item An incremental constraint-based framework for task and motion planning (2018)
-\item Combined Task and Motion Planning via Sketch Decompositions (2024)
-\item Representation, learning, and planning algorithms for geometric task and motion planning (2022)
-\item Socially intelligent task and motion planning for human-robot interaction (2020)
+\item \textbf{Evidence ceiling.} The benchmark is local and synthetic. It is deterministic and useful, but it is not hardware evidence, not a high-fidelity simulator benchmark, and not an accepted robotics suite.
+\item \textbf{Baseline ceiling.} A simple learned failure classifier is stronger than the proposed method on the main hard split. A positive paper would need a clearer gap against learned predictors and modern TAMP/replanning systems.
+\item \textbf{Objective ceiling.} Ablations show that the proposed objective is misspecified. Removing terms that should matter improves performance.
 \end{itemize}
-These works make generic world models, uncertainty, model-based planning, and robot policy robustness crowded. Without real empirical evidence, the remaining novelty boundary is too weak for ICLR main.
 
-\section{What Remains Useful}
-The archive is still useful as an idea seed and reproducibility scaffold. The synthetic code, stress-test CSVs, reviewer attacks, and novelty-boundary docs can inform a future project. The correct next step is not more paper polishing; it is new evidence: implemented models, real baselines, manual related work, and robot or high-fidelity simulator validation.
+\section{What Would Be Required To Revive It}
+A future submission-worthy version would need to become a substantially new empirical project:
+\begin{itemize}
+\item evaluate on a real robot or a recognized high-fidelity manipulation/navigation benchmark;
+\item implement modern task-and-motion planning, contingent planning, and learned world-model baselines;
+\item train the recoverability score from data rather than hand-designing the score;
+\item report qualitative rollouts, failure videos, seed-level statistics, paired tests, and calibration curves;
+\item show that the score reduces irreversible physical errors without hiding cost or damage tradeoffs.
+\end{itemize}
 
-\section{Terminal Action}
-Decision: \textbf{KILL/ARCHIVE for ICLR main}. Do not submit this paper to ICLR main in the current form. Revival requires a substantially new empirical project.
+\section{Reproducibility}
+Run the benchmark from the repository root:
+\begin{verbatim}
+python src\run_experiment.py
+\end{verbatim}
+The script writes \texttt{rollouts.csv}, \texttt{metrics.csv}, \texttt{pairwise\_stats.csv}, \texttt{ablation\_metrics.csv}, \texttt{stress\_sweep.csv}, \texttt{negative\_cases.csv}, \texttt{summary.txt}, and the figures used in this manuscript. The canonical local PDF is \texttt{C:/Users/wangz/Downloads/82.pdf}.
+
+\section{Conclusion}
+The recoverability idea remains research-interesting: nominal feasibility is plainly inadequate when physical deviations create irreversible traps. But the present v4 evidence does not justify an ICLR-main submission. The correct action is to archive Paper82 as a negative, reproducible evidence audit and move to the next paper.
 
 \end{document}

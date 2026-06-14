@@ -1,16 +1,34 @@
-Submission-hardening experiment for paper 82 planner_recoverability_scores
-Seven seeds, 600 episodes per seed, strong baselines, ablations, stress sweep, and negative cases.
-observed_only_behavior_clone hidden_mode_shift mean_success=0.4053 ci95=0.0111 tail=0.5947
-observed_only_behavior_clone combined_stress mean_success=0.3276 ci95=0.0212 tail=0.6724
-data_augmentation_wam hidden_mode_shift mean_success=0.4883 ci95=0.0235 tail=0.5117
-data_augmentation_wam combined_stress mean_success=0.4200 ci95=0.0181 tail=0.5800
-scalar_uncertainty_planner hidden_mode_shift mean_success=0.5569 ci95=0.0113 tail=0.4431
-scalar_uncertainty_planner combined_stress mean_success=0.5172 ci95=0.0086 tail=0.4828
-ensemble_disagreement_planner hidden_mode_shift mean_success=0.5776 ci95=0.0198 tail=0.4224
-ensemble_disagreement_planner combined_stress mean_success=0.5488 ci95=0.0145 tail=0.4512
-conformal_risk_filter hidden_mode_shift mean_success=0.6093 ci95=0.0202 tail=0.3907
-conformal_risk_filter combined_stress mean_success=0.5576 ci95=0.0145 tail=0.4424
-proposed_branch_mechanism hidden_mode_shift mean_success=0.6810 ci95=0.0283 tail=0.3190
-proposed_branch_mechanism combined_stress mean_success=0.6636 ci95=0.0198 tail=0.3364
-oracle_branch_upper_bound hidden_mode_shift mean_success=0.7552 ci95=0.0198 tail=0.2448
-oracle_branch_upper_bound combined_stress mean_success=0.7429 ci95=0.0224 tail=0.2571
+Paper 82 planner_recoverability_scores v4 rebuild
+Terminal recommendation: KILL_ARCHIVE
+Reason: local task-and-motion recoverability benchmark exists, but no robot hardware or external high-fidelity benchmark is available.
+Main rollout rows: 11760
+Ablation rollout rows: 2058
+Stress rollout rows: 25200
+Seeds: [0, 1, 2, 3, 4, 5, 6]
+
+Combined hard-shift goal success:
+recoverability_score_planner=0.85034 ci95=0.04163
+contingent_replanner=0.84353 ci95=0.04055
+robust_margin_planner=0.34013 ci95=0.04745
+learned_failure_classifier=0.87755 ci95=0.04128
+expected_cost_replanner=0.84013 ci95=0.04854
+oracle_recoverability_upper_bound=0.87415 ci95=0.04037
+irreversible proposed=0.00680, contingent=0.00000
+damage proposed=0.01701, contingent=0.01020
+paired goal-success diff vs contingent=0.00680 ci95=0.02828
+
+Ablation combined_hard_shift:
+full_recoverability_score goal_success=0.85034 ci95=0.04163 recovery_success=0.74422 irreversible=0.00680 damage=0.01701 cost=1.78854
+minus_recovery_success goal_success=0.84353 ci95=0.04538 recovery_success=0.65498 irreversible=0.00680 damage=0.02721 cost=1.79597
+minus_recovery_cost goal_success=0.84694 ci95=0.03791 recovery_success=0.72313 irreversible=0.00680 damage=0.02041 cost=1.79326
+minus_irreversible_trap_penalty goal_success=0.86734 ci95=0.04055 recovery_success=0.88617 irreversible=0.00000 damage=0.01020 cost=1.77835
+minus_diagnostic_value goal_success=0.83673 ci95=0.04603 recovery_success=0.59286 irreversible=0.00680 damage=0.03401 cost=1.81800
+minus_failure_probability goal_success=0.86394 ci95=0.03333 recovery_success=0.83333 irreversible=0.00340 damage=0.01361 cost=1.78048
+risk_only_score goal_success=0.68708 ci95=0.04823 recovery_success=0.58810 irreversible=0.00680 damage=0.03061 cost=1.95828
+
+Combined stress level 1.0:
+robust_margin_planner goal_success=0.27976 ci95=0.07286 irreversible=0.00000 damage=0.04762 cost=2.34804
+contingent_replanner goal_success=0.75000 ci95=0.06902 irreversible=0.00595 damage=0.02381 cost=1.92670
+learned_failure_classifier goal_success=0.84524 ci95=0.06099 irreversible=0.00000 damage=0.01191 cost=1.80524
+recoverability_score_planner goal_success=0.85119 ci95=0.05872 irreversible=0.00595 damage=0.01190 cost=1.80996
+oracle_recoverability_upper_bound goal_success=0.84524 ci95=0.06099 irreversible=0.00000 damage=0.01191 cost=1.80576
