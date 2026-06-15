@@ -1,6 +1,6 @@
 # Paper 82 Submission Readiness Audit
 
-Last update: 2026-06-14 10:03:02 +01:00
+Last update: 2026-06-15 08:43:38 +0100
 
 ## Terminal Decision
 
@@ -46,3 +46,18 @@ These ablations improve success, so the objective is misspecified.
 - Implement modern TAMP, contingent planning, and learned world-model baselines.
 - Learn or calibrate the recoverability score from data.
 - Show that recoverability reduces irreversible physical errors without hiding cost or damage tradeoffs.
+
+## 2026-06-15 Continuation Audit
+
+The full benchmark was rerun without reducing seeds, baselines, ablations, or stress coverage. The result remains KILL_ARCHIVE.
+
+- Code compile: passed.
+- Main rows: 11,760.
+- Ablation rows: 2,058.
+- Stress rows: 25,200.
+- Seeds: 0 through 6.
+- PDF: rebuilt at `C:/Users/wangz/Downloads/82.pdf`.
+- PDF SHA256: `CB79882533BE0A5DA119C783411BE47C2534307987372ADD8B39C7509595140E`.
+- Desktop PDF: absent.
+
+The decisive negative evidence did not change: learned failure classification beats the proposed recoverability score on the main split, paired gain over contingent replanning is non-decisive, and ablations still contradict the proposed score decomposition.

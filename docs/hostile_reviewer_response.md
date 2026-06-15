@@ -13,7 +13,7 @@
 - Integrating Motion Planning in Vision Language Action Agents (2025)
 
         ## ICLR Main Response
-        A hostile ICLR reviewer would be correct to reject this as a main-conference submission. The v2 paper has reproducible synthetic evidence and careful limitations, but it does not contain the real robot, high-fidelity simulator, learned model, or manual related-work depth needed for the ICLR main track.
+        A hostile ICLR reviewer would be correct to reject this as a main-conference submission. The v4 paper has an executable local benchmark, but the proposed recoverability score does not beat the learned failure classifier on the main hard split and its ablations expose objective misspecification. It also does not contain the real robot, high-fidelity simulator, or manual related-work depth needed for the ICLR main track.
 
         ## Honest Action
         The paper is marked `KILL_ARCHIVE`. This avoids converting a generated workshop-style idea into an overstated main-conference claim.
@@ -24,3 +24,16 @@
         - Manual full-paper related-work audit.
         - Paper-specific writing and figures.
         - Evidence that the core mechanism is learned and useful under deployment shift.
+
+## 2026-06-15 Continuation Response
+
+The continuation audit strengthens the hostile-reviewer conclusion:
+
+- `recoverability_score_planner`: 0.85034 +/- 0.04163 goal success on `combined_hard_shift`.
+- `learned_failure_classifier`: 0.87755 +/- 0.04128 goal success.
+- Paired recoverability-minus-learned difference: -0.02721 +/- 0.02776, better in only 1/7 seeds.
+- Paired gain over `contingent_replanner`: 0.00680 +/- 0.02828, not decisive.
+- `contingent_replanner` has lower irreversible failure and damage than the proposed score.
+- Removing the irreversible-trap penalty or failure-probability term improves success, contradicting the mechanism.
+
+The honest action remains KILL_ARCHIVE.
