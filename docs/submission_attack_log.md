@@ -192,3 +192,10 @@ Attack: No meaningful recoverable ICLR-main issue remains after archiving.
 Verdict: Terminal condition reached.
 
 Action: Mark KILL_ARCHIVE and stop.
+
+## 2026-06-15 Continuation Gate
+Attack: The v4 KILL_ARCHIVE decision may be stale unless the executable benchmark, CSVs, PDF, and public artifact state are rechecked.
+
+Verdict: Rechecked. KILL_ARCHIVE remains the correct terminal state.
+
+Action: Keep KILL_ARCHIVE. The full benchmark rerun regenerated 11,760 main rollouts, 2,058 ablation rollouts, and 25,200 stress rollouts. `recoverability_score_planner` loses to `learned_failure_classifier` on `combined_hard_shift`, 0.85034 +/- 0.04163 versus 0.87755 +/- 0.04128, has only 0.00680 +/- 0.02828 paired gain over `contingent_replanner`, and is contradicted by ablations where removing the irreversible-trap penalty or failure-probability term improves success.
