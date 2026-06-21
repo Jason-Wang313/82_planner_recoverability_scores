@@ -1,17 +1,25 @@
-split,seed,episode_id,method,plan_type,failure_label,deviation,recovered,total_cost,lesson
-open_easy,0,5,robust_margin_planner,conservative_backoff,budget_overrun,0,0,2.45271,recovery existed but consumed too much budget
-open_easy,0,9,nominal_shortest_plan,direct_shortcut,damage_or_lost_object,1,1,2.28421,physical deviation damaged the object or lost manipulation state
-open_easy,0,9,expected_cost_replanner,direct_shortcut,damage_or_lost_object,1,1,2.28421,physical deviation damaged the object or lost manipulation state
-open_easy,0,15,risk_averse_plan,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
-open_easy,0,15,contingent_replanner,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
-open_easy,0,15,learned_failure_classifier,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
-open_easy,0,15,recoverability_score_planner,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
-open_easy,0,15,oracle_recoverability_upper_bound,diagnostic_staging,unrecovered_deviation,1,0,1.97939,failure was detected but recovery action did not succeed
-open_easy,0,22,risk_averse_plan,robust_margin_route,damage_or_lost_object,1,0,2.38891,physical deviation damaged the object or lost manipulation state
-open_easy,1,4,nominal_shortest_plan,direct_shortcut,irreversible_trap,1,0,1.10221,nominally feasible plan entered a state with no cheap recovery branch
-open_easy,1,4,risk_averse_plan,direct_shortcut,irreversible_trap,1,0,1.10221,nominally feasible plan entered a state with no cheap recovery branch
-open_easy,1,4,expected_cost_replanner,direct_shortcut,irreversible_trap,1,0,1.10221,nominally feasible plan entered a state with no cheap recovery branch
-open_easy,1,23,risk_averse_plan,conservative_backoff,budget_overrun,1,1,3.03457,recovery existed but consumed too much budget
-open_easy,1,26,nominal_shortest_plan,direct_shortcut,unrecovered_deviation,1,0,2.39787,failure was detected but recovery action did not succeed
-open_easy,1,26,expected_cost_replanner,direct_shortcut,unrecovered_deviation,1,0,2.39787,failure was detected but recovery action did not succeed
-open_easy,2,8,risk_averse_plan,conservative_backoff,irreversible_trap,1,0,2.36592,nominally feasible plan entered a state with no cheap recovery branch
+source,split,seed,episode_id,method,plan_type,failure_label,goal_success,deviation,recovered,total_cost,risk_upper,lesson
+v5_main_failure,open_easy,2,3,recoverability_score_planner_v5,direct_shortcut,unrecovered_deviation,0,1,0,2.25277,0.14206,failure was detected but recovery action did not succeed
+v5_main_failure,open_easy,2,28,recoverability_score_planner_v5,direct_shortcut,damage_or_lost_object,0,1,0,2.28213,0.27214,physical deviation damaged the object or lost manipulation state
+strong_baseline_failure,open_easy,5,36,cvar_recovery_planner,direct_shortcut,irreversible_trap,0,1,0,0.98462,0.17004,nominally feasible plan entered a state with no cheap recovery branch
+strong_baseline_failure,open_easy,7,0,contingent_replanner,dual_recovery_branch,unrecovered_deviation,0,1,0,2.41910,0.15872,failure was detected but recovery action did not succeed
+v5_main_failure,narrow_passage_shift,0,4,recoverability_score_planner_v5,dual_recovery_branch,budget_overrun,0,1,1,2.59614,0.07688,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,0,8,learned_expected_utility,diagnostic_staging,unrecovered_deviation,0,1,0,2.29006,0.09758,failure was detected but recovery action did not succeed
+strong_baseline_failure,narrow_passage_shift,0,17,contingent_replanner,dual_recovery_branch,budget_overrun,0,0,0,2.18144,0.09301,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,0,17,learned_expected_utility,reversible_probe,budget_overrun,0,1,0,2.20149,0.12496,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,0,28,cvar_recovery_planner,dual_recovery_branch,budget_overrun,0,1,1,2.61474,0.13745,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,0,30,cvar_recovery_planner,diagnostic_staging,budget_overrun,0,1,1,2.34308,0.14118,recovery existed but consumed too much budget
+v5_main_failure,narrow_passage_shift,0,34,recoverability_score_planner_v5,diagnostic_staging,budget_overrun,0,1,1,2.30190,0.08080,recovery existed but consumed too much budget
+v5_main_failure,narrow_passage_shift,0,43,recoverability_score_planner_v5,reversible_probe,budget_overrun,0,1,1,2.37144,0.07981,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,0,47,learned_expected_utility,dual_recovery_branch,budget_overrun,0,1,1,2.45889,0.07605,recovery existed but consumed too much budget
+v5_main_failure,narrow_passage_shift,1,5,recoverability_score_planner_v5,contingency_branch,damage_or_lost_object,0,1,0,2.46295,0.08603,physical deviation damaged the object or lost manipulation state
+strong_baseline_failure,narrow_passage_shift,1,11,contingent_replanner,contingency_branch,budget_overrun,0,1,1,2.46483,0.08177,recovery existed but consumed too much budget
+v5_main_failure,narrow_passage_shift,1,12,recoverability_score_planner_v5,contingency_branch,budget_overrun,0,1,1,2.48804,0.11801,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,1,62,learned_expected_utility,diagnostic_staging,damage_or_lost_object,0,1,0,2.21928,0.08271,physical deviation damaged the object or lost manipulation state
+v5_main_failure,narrow_passage_shift,2,0,recoverability_score_planner_v5,robust_margin_route,budget_overrun,0,1,0,2.78857,0.08560,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,2,18,cvar_recovery_planner,reversible_probe,damage_or_lost_object,0,1,0,2.21894,0.22870,physical deviation damaged the object or lost manipulation state
+strong_baseline_failure,narrow_passage_shift,2,24,cvar_recovery_planner,reversible_probe,budget_overrun,0,1,1,2.42826,0.17340,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,2,26,cvar_recovery_planner,contingency_branch,budget_overrun,0,1,1,2.56695,0.13456,recovery existed but consumed too much budget
+v5_main_failure,narrow_passage_shift,2,57,recoverability_score_planner_v5,diagnostic_staging,unrecovered_deviation,0,1,0,2.24694,0.07350,failure was detected but recovery action did not succeed
+strong_baseline_failure,narrow_passage_shift,3,34,learned_expected_utility,diagnostic_staging,budget_overrun,0,1,1,2.30942,0.07409,recovery existed but consumed too much budget
+strong_baseline_failure,narrow_passage_shift,3,35,learned_expected_utility,reversible_probe,unrecovered_deviation,0,1,0,2.28896,0.13783,failure was detected but recovery action did not succeed

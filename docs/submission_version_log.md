@@ -34,3 +34,13 @@
 - Cleaned BibTeX placeholder entries by adding explicit authors and changed fragile `[h]` floats to `[tbp]` before rebuilding the PDF.
 - Verified `C:/Users/wangz/Downloads/82.pdf` SHA256 `CB79882533BE0A5DA119C783411BE47C2534307987372ADD8B39C7509595140E`.
 - Terminal decision remains: KILL_ARCHIVE.
+
+## v5 Expanded-Standard Audit - 2026-06-21
+
+- Added `docs/paper82_expanded_submission_plan_20260621.md` before changing code.
+- Replaced the v4 runner with a 10-seed, nine-split, thirteen-method CPU-only audit.
+- Added hard-regime aggregate seed metrics, hard-regime paired tests, expanded ablations, six-axis stress sweeps, fixed-risk deployment budgets, and negative cases.
+- Added `scripts/generate_manuscript.py` and `scripts/validate_submission_artifacts.py`.
+- Generated a 28-page ICLR-style KILL_ARCHIVE manuscript with bright boxed clickable citations and evidence appendices.
+- Verified `C:/Users/wangz/Downloads/82.pdf` SHA256 `D32F6F11DA77897EC8671FAE3D9860B1474AD6A5091A9F7034BDB33F77BB6249`; `C:/Users/wangz/Desktop/82.pdf` is absent.
+- Terminal decision remains: KILL_ARCHIVE.

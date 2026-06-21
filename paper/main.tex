@@ -1,153 +1,1756 @@
 \documentclass{article}
+
 \usepackage{iclr2026_conference,times}
+
 \input{math_commands.tex}
+
 \usepackage{hyperref}
+
 \usepackage{url}
+
 \usepackage{booktabs}
+
 \usepackage{graphicx}
+
 \usepackage{array}
+
+\usepackage{longtable}
+
+\usepackage{xcolor}
+
+\hypersetup{colorlinks=false,pdfborder={0 0 1.6},citebordercolor={0 1 0},linkbordercolor={1 0.55 0},urlbordercolor={0 0.45 1}}
 
 \graphicspath{{../figures/}}
 
-\title{Planner Recoverability Scores Under Physical Deviation:\\A Negative ICLR-Main Evidence Audit}
+\newcommand{\methodname}{recoverability-score planner v5}
+
+\title{Planner Recoverability Scores Under Physical Deviation:\\An Expanded Negative ICLR-Main Readiness Audit}
+
 \author{Anonymous Authors}
 
 \begin{document}
+
 \maketitle
 
 \begin{abstract}
-Robotic task-and-motion planners usually score plans by nominal feasibility, expected cost, or static risk. The research bet tested here is that a plan should instead be scored by \emph{recoverability}: when execution deviates because of contact, slip, narrow passages, or hidden irreversible traps, can the robot detect the deviation and return to a goal-achieving branch without excessive cost or damage? We implemented a deterministic, reproducible local benchmark with five held-out physical-shift regimes, eight planners, seven random seeds, 11,760 main rollouts, 2,058 ablation rollouts, and 25,200 stress-rollout evaluations. The resulting evidence is useful but not submission-ready for ICLR main. On the combined hard-shift split, the proposed recoverability-score planner reaches 0.850 goal success, but a learned failure classifier reaches 0.878 and an oracle reaches 0.874. The proposed method only improves over a contingent replanner by 0.0068 paired goal-success points, while also causing more irreversible failures and more damage. Worse, removing the irreversible-trap penalty or failure-probability term improves success. We therefore mark this paper \textbf{KILL/ARCHIVE}, not because the idea is empty, but because the present evidence falsifies the stronger claim and lacks hardware or high-fidelity simulator validation. Submission-hardening version: v4.
+
+This paper asks whether task-and-motion plans should be scored by calibrated recoverability under physical deviation, not only by nominal feasibility or expected cost. We rebuild the original archive into a frozen v5 audit with 74,880 main rollouts, 16,000 ablation rollouts, 94,080 stress rollouts, 30,720 fixed-risk rollouts, and 24 retained negative cases. The expanded method reaches 0.887 +/- 0.008 hard-regime aggregate goal success, but the strongest non-oracle baseline, Learned EU, reaches 0.923 +/- 0.009. The paired lower confidence bound versus that baseline is negative, central ablations match or beat the full score, fixed-risk coverage collapses at the 0.05 budget, and maximum combined stress is dominated by learned expected utility. The correct terminal decision is therefore \textbf{KILL/ARCHIVE}: the recoverability idea remains interesting, but this repository still lacks the evidence needed for an ICLR main-conference submission.
+
 \end{abstract}
 
 \section{Terminal Decision}
-\textbf{Decision: KILL/ARCHIVE for ICLR main.} The repository now contains a real executable benchmark, baselines, ablations, stress sweeps, figures, and reproducibility files. However, the empirical story does not support a main-conference robotics submission. The proposed recoverability score is not the best non-oracle method on the hardest split, its advantage over a contingent replanner is statistically small, and its own ablations expose a misspecified objective. The result should be archived as a useful negative study rather than submitted as a positive method paper.
 
-\section{Question}
-The intended claim was:
-\begin{quote}
-Score robot plans by recoverability under physical deviation, not only by nominal feasibility.
-\end{quote}
-That claim is plausible in robotics settings where a short plan can enter an unrecoverable contact state, lose an object, or consume all slack before detecting a deviation. A publishable version would need evidence that a recoverability score changes plan choice in a way that consistently beats strong replanning and learned failure predictors under physically meaningful shifts.
+\textbf{Decision: KILL/ARCHIVE for ICLR main.} The v5 rebuild is much stronger than the old archive: it adds a calibrated recoverability certificate, a larger benchmark, learned expected-utility and fixed-risk baselines, paired hard-regime statistics, two hard ablation splits, six stress axes, and explicit negative cases. Those additions make the paper more useful, but they do not rescue the central claim. On the predefined hard-regime aggregate, \methodname{} reaches 0.887 +/- 0.008, while Learned EU reaches 0.923 +/- 0.009. Because the protocol was frozen before execution, this is not a tuning failure to hide; it is the result.
 
-\section{Benchmark}
-We built a local task-and-motion recoverability benchmark with the following structure.
-\begin{itemize}
-\item \textbf{Episodes.} Each episode contains a hidden deviation profile, a budget, a slip factor, a narrow-passage difficulty, a trap severity, and sensor uncertainty.
-\item \textbf{Candidate plans.} The planner chooses among direct shortcuts, robust-margin routes, contingency branches, diagnostic staging, and conservative backoff plans.
-\item \textbf{Splits.} Evaluation covers open easy tasks, narrow-passage shifts, object-slip shifts, irreversible-commitment tasks, and a combined hard-shift split.
-\item \textbf{Rollout coupling.} For fairness, the same episode-plan pair has the same stochastic physical outcome regardless of which method selects it.
-\item \textbf{Metrics.} We report goal success, recovery success after deviation, irreversible failure, damage, total cost, budget overrun, and calibration error across seven seeds.
-\end{itemize}
-The benchmark is deterministic from source code and writes all CSV files under \texttt{results/}. It is not a real robot benchmark and not a high-fidelity simulator. That limitation is central to the terminal decision.
+The archive is valuable precisely because it refuses to optimize for pretty results. It records that nominal feasibility is inadequate, but also that the proposed recoverability score is not yet a decisive alternative to learned expected utility or calibrated risk filtering. A future version would need real robot or recognized high-fidelity benchmark evidence, external baselines, and a learned or certified score that survives the ablation and fixed-risk gates.
 
-\section{Methods}
-We compare the proposed score against seven alternatives:
-\begin{itemize}
-\item \textbf{Nominal shortest plan:} chooses the lowest nominal cost.
-\item \textbf{Risk-averse plan:} avoids predicted failure probability.
-\item \textbf{Expected-cost replanner:} optimizes expected physical cost.
-\item \textbf{Robust-margin planner:} prefers geometric slack.
-\item \textbf{Contingent replanner:} values contingency branches and fallback feasibility.
-\item \textbf{Learned failure classifier:} a ridge classifier trained on generated training episodes.
-\item \textbf{Oracle recoverability upper bound:} uses hidden rollout probabilities as a ceiling.
-\item \textbf{Recoverability-score planner:} combines success probability, recovery success, recovery cost, diagnostic value, and irreversible-trap penalties.
-\end{itemize}
+\section{Problem Setting}
 
-\section{Main Results}
-Table~\ref{tab:hard} shows the combined hard-shift split. The proposed score is much better than nominal, risk-only, and robust-margin planning. That is the useful part of the archive. But it does not beat the learned failure classifier and it barely beats contingent replanning.
+A task-and-motion planner often chooses among plans that look similar in nominal feasibility but differ sharply after contact, slip, sensing dropout, or hidden mode shifts. A direct shortcut may be short and feasible until a small deviation leaves the robot wedged in a narrow passage. A conservative route may avoid the deviation but consume the whole budget. A contingency branch may be longer but keeps an executable recovery route available. The recoverability thesis says that these alternatives should be represented explicitly rather than averaged into a single scalar uncertainty term.
 
-\begin{table}[tbp]
-\centering
-\caption{Combined hard-shift results over seven seeds. Confidence intervals are 95\% intervals over seed means.}
-\label{tab:hard}
-\begin{tabular}{lrrrr}
+This thesis sits near task-and-motion planning, robust motion planning, feasibility prediction, contingent planning, and learning-guided search. The hostile prior-work pool includes incremental constraint-based TAMP \citep{pool82_01}, sketch decompositions \citep{pool82_03}, geometric TAMP learning \citep{pool82_04}, score-space guidance \citep{pool82_08}, sequence feasibility prediction \citep{pool82_12}, and robust feedback planning \citep{pool82_18}. These papers make weak claims easy to attack: if recoverability is just another risk or learned feasibility score, the contribution disappears.
+
+\section{Recoverability Certificates}
+
+For an episode $e$ and candidate plan $p$, let $f_p$ denote the probability of a physical deviation, $r_p$ the probability that a deviation is recoverable, $t_p$ the probability of an irreversible trap, $d_p$ the probability of damage, $c_p$ the nominal cost, $k_p$ the expected recovery cost, and $B_e$ the execution budget. The recoverable-success term is $f_p(1-t_p)r_p$, while nominal survival is $1-f_p$. The proposed score tests whether a planner should prefer plans with a larger recoverable-success term and lower irreversible-risk term even when their nominal cost is higher.
+
+\textbf{Definition 1 (recoverability certificate).} A recoverability certificate is a tuple $(\hat f_p,\hat r_p,\hat t_p,\hat d_p,\hat k_p,h_p,\epsilon_p)$ containing predicted deviation, recovery, trap, damage, recovery cost, branch entropy, and a calibration residual upper bound. The certificate is not a proof of robot safety; it is a compact local model of what the planner believes can still be recovered after execution leaves the nominal path.
+
+\textbf{Lemma 1 (calibrated unsafe upper bound).} If the held-out residual satisfies $u_p-\hat u_p \leq \epsilon$ for unsafe value $u_p=t_p+d_p+f_p(1-r_p)$, then $\hat u_p+\epsilon$ is a conservative upper bound on the unsafe value for that calibration population. The v5 score uses this bound as a penalty and the fixed-risk experiment uses it as an abstention rule. The lemma only transfers as far as the calibration population transfers; the fixed-risk collapse below shows why this limitation matters.
+
+\textbf{Proposition 1 (recoverability dominance under equal nominal terms).} Consider two plans with equal nominal cost and equal predicted deviation probability. If one plan has weakly higher predicted recovery success, weakly lower trap and damage probabilities, and weakly larger branch entropy, then the v5 score weakly prefers it. This is a design property, not an empirical guarantee. The ablation section tests whether the property actually helps when learned baselines can infer expected utility directly.
+
+\textbf{Failure mode.} If recovery cost, trap probability, and damage probability are not separately identifiable from the local observations, recoverability degenerates into ordinary risk avoidance. That degeneration is visible when removing budget slack, damage penalties, or expected-utility terms improves success. The v5 paper therefore treats ablations as a central falsification test rather than a decorative appendix.
+
+\section{Frozen Experimental Protocol}
+
+The protocol was written before execution in \texttt{docs/paper82\_expanded\_submission\_plan\_20260621.md}. The main evaluation uses 10 seeds, 9 splits, 64 test episodes per split and seed, 13 methods, and 74,880 main rollouts. The hard-regime aggregate combines all non-easy splits: narrow passages, object slip, irreversible commitment, sensor dropout, tight budgets, latent modes, adversarial compound shifts, and combined hard shifts.
+
+The strongest non-oracle baselines are intentionally uncomfortable: learned risk classification, learned expected utility, CVaR recovery planning, conformal failure filtering, contingent replanning, and robust-margin planning. The protocol also includes a high-information oracle as a ceiling. The decision gate marks \texttt{STRONG\_REVISE} only if v5 beats the strongest non-oracle baseline by at least 0.03 absolute hard-regime success, has a positive paired lower confidence bound, does not worsen safety, passes ablation necessity, preserves fixed-risk coverage at budget 0.05, and is not dominated at maximum combined stress.
+
+\section{Main Hard-Regime Results}
+
+Table~\ref{tab:hard-main} is the central result. Recover-v5 is better than the older contingent and CVaR-style hand-built scores, but it loses to learned expected utility and learned risk. This is not a small presentation issue: the strongest learned baseline wins all 10 paired hard-aggregate seeds on goal success.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.23\linewidth}ccccc}
+\caption{Hard-regime aggregate over eight non-easy splits.}\label{tab:hard-main}\\
 \toprule
-Method & Goal success & Recovery success & Irreversible & Damage \\
+Method & Goal success & Safety utility & Irrev. & Damage & Cost\\
 \midrule
-Nominal shortest & $0.588 \pm 0.033$ & $0.049$ & $0.170$ & $0.265$ \\
-Risk-averse & $0.653 \pm 0.056$ & $0.612$ & $0.007$ & $0.031$ \\
-Robust margin & $0.340 \pm 0.047$ & $0.576$ & $0.007$ & $0.048$ \\
-Expected-cost replanner & $0.840 \pm 0.049$ & $0.602$ & $0.017$ & $0.048$ \\
-Contingent replanner & $0.844 \pm 0.041$ & $0.829$ & $0.000$ & $0.010$ \\
-Learned failure classifier & $\mathbf{0.878 \pm 0.041}$ & $\mathbf{0.901}$ & $0.000$ & $\mathbf{0.007}$ \\
-Recoverability score & $0.850 \pm 0.042$ & $0.744$ & $0.007$ & $0.017$ \\
-Oracle upper bound & $0.874 \pm 0.040$ & $0.872$ & $0.000$ & $0.010$ \\
+\endfirsthead
+\caption[]{Hard-regime aggregate over eight non-easy splits. (continued)}\\
+\toprule
+Method & Goal success & Safety utility & Irrev. & Damage & Cost\\
+\midrule
+\endhead
+Nominal & 0.685 +/- 0.011 & 0.075 +/- 0.034 & 0.1193 & 0.1875 & 1.358\\
+Risk-averse & 0.747 +/- 0.009 & 0.480 +/- 0.014 & 0.0022 & 0.0146 & 1.981\\
+Robust margin & 0.185 +/- 0.012 & -0.337 +/- 0.019 & 0.0039 & 0.0322 & 2.396\\
+Contingent & 0.787 +/- 0.011 & 0.544 +/- 0.017 & 0.0000 & 0.0080 & 2.000\\
+Conformal filter & 0.900 +/- 0.005 & 0.713 +/- 0.009 & 0.0002 & 0.0076 & 1.809\\
+Learned risk & 0.905 +/- 0.006 & 0.721 +/- 0.009 & 0.0000 & 0.0059 & 1.813\\
+Learned EU & 0.923 +/- 0.009 & 0.750 +/- 0.013 & 0.0000 & 0.0051 & 1.779\\
+CVaR recovery & 0.882 +/- 0.009 & 0.680 +/- 0.014 & 0.0004 & 0.0100 & 1.870\\
+Recover-v5 & 0.887 +/- 0.008 & 0.691 +/- 0.011 & 0.0004 & 0.0072 & 1.858\\
+Oracle & 0.929 +/- 0.007 & 0.758 +/- 0.011 & 0.0000 & 0.0059 & 1.760\\
 \bottomrule
-\end{tabular}
-\end{table}
+\end{longtable}
+\normalsize
+\end{center}
 
-\begin{figure}[tbp]
+\begin{figure}[t]
+
 \centering
-\includegraphics[width=0.86\linewidth]{recoverability_success.png}
-\caption{Goal success across evaluation splits. The proposed score is useful on hard splits but does not dominate the learned failure classifier.}
-\label{fig:success}
+
+\includegraphics[width=0.98\linewidth]{recoverability_success.png}
+
+\caption{Hard-regime aggregate goal success. The proposed method is not the best non-oracle method.}
+
+\label{fig:hard-success}
+
 \end{figure}
 
-\section{Ablation Results}
-The ablation table is the strongest reason to archive the submission. A well-specified recoverability objective should degrade when central terms are removed. Instead, removing the irreversible-trap penalty and removing the failure-probability term both improve hard-split success.
+\begin{figure}[t]
 
-\begin{table}[tbp]
 \centering
-\caption{Recoverability-score ablations on the combined hard-shift split.}
-\label{tab:ablation}
-\begin{tabular}{lrrrr}
+
+\includegraphics[width=0.98\linewidth]{recoverability_failures.png}
+
+\caption{Irreversible and damage failures on the hard aggregate. Safety is low in absolute terms, but the learned expected-utility baseline remains stronger overall.}
+
+\label{fig:failures}
+
+\end{figure}
+
+\section{Paired Hard-Aggregate Test}
+
+The predefined paired test compares Recover-v5 with the strongest non-oracle method selected by hard-regime aggregate success, Learned EU. The lower confidence bound is negative for goal success and safety utility, so the positive-paper claim fails under paired evidence.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.28\linewidth}cccc}
+\caption{Paired seed differences for Recover-v5 minus Learned EU.}\label{tab:paired}\\
 \toprule
-Ablation & Goal success & Recovery success & Irreversible & Damage \\
+Metric & Mean diff & CI95 & Lower95 & Better seeds\\
 \midrule
-Full score & $0.850 \pm 0.042$ & $0.744$ & $0.007$ & $0.017$ \\
-Minus recovery success & $0.844 \pm 0.045$ & $0.655$ & $0.007$ & $0.027$ \\
-Minus recovery cost & $0.847 \pm 0.038$ & $0.723$ & $0.007$ & $0.020$ \\
-Minus irreversible-trap penalty & $\mathbf{0.867 \pm 0.041}$ & $\mathbf{0.886}$ & $\mathbf{0.000}$ & $\mathbf{0.010}$ \\
-Minus diagnostic value & $0.837 \pm 0.046$ & $0.593$ & $0.007$ & $0.034$ \\
-Minus failure probability & $0.864 \pm 0.033$ & $0.833$ & $0.003$ & $0.014$ \\
-Risk-only score & $0.687 \pm 0.048$ & $0.588$ & $0.007$ & $0.031$ \\
+\endfirsthead
+\caption[]{Paired seed differences for Recover-v5 minus Learned EU. (continued)}\\
+\toprule
+Metric & Mean diff & CI95 & Lower95 & Better seeds\\
+\midrule
+\endhead
+goal\_success & -0.03594 & 0.01288 & -0.04882 & 0/10\\
+recovery\_success & 0.00188 & 0.03609 & -0.03420 & 4/10\\
+irreversible\_failure & 0.00039 & 0.00051 & -0.00012 & 0/10\\
+damage & 0.00215 & 0.00264 & -0.00050 & 4/10\\
+total\_cost & 0.07953 & 0.00856 & 0.07097 & 0/10\\
+calibration\_error & -0.02803 & 0.01159 & -0.03962 & 9/10\\
+safety\_utility & -0.05903 & 0.01864 & -0.07767 & 0/10\\
 \bottomrule
-\end{tabular}
-\end{table}
+\end{longtable}
+\normalsize
+\end{center}
 
-\begin{figure}[tbp]
+\section{Ablations}
+
+The ablation test is the harshest mechanism test. On combined hard shift, removing budget slack improves success from 0.836 to 0.855 and improves safety utility. On adversarial compound shift, removing the damage penalty, removing branch entropy, and expected-utility-only all match or beat the full score. That means the score is not yet a clean decomposition of recoverability; some terms are compensating for misspecification rather than carrying necessary mechanism information.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.20\linewidth}p{0.26\linewidth}ccccc}
+\caption{Ablations on combined hard shift and adversarial compound shift.}\label{tab:ablations}\\
+\toprule
+Split & Ablation & Success & CI95 & Irrev. & Damage & Safety utility\\
+\midrule
+\endfirsthead
+\caption[]{Ablations on combined hard shift and adversarial compound shift. (continued)}\\
+\toprule
+Split & Ablation & Success & CI95 & Irrev. & Damage & Safety utility\\
+\midrule
+\endhead
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 0.83625 & 0.01948 & 0.00125 & 0.01000 & 0.61276\\
+combined\_hard\_shift & minus\_recovery\_success & 0.82375 & 0.02670 & 0.00125 & 0.02000 & 0.58396\\
+combined\_hard\_shift & minus\_recovery\_cost & 0.84750 & 0.01926 & 0.00000 & 0.02500 & 0.61175\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 0.83125 & 0.02457 & 0.00000 & 0.00875 & 0.61011\\
+combined\_hard\_shift & minus\_damage\_penalty & 0.84375 & 0.02429 & 0.00000 & 0.01750 & 0.61647\\
+combined\_hard\_shift & minus\_budget\_slack & 0.85500 & 0.01833 & 0.00000 & 0.00875 & 0.64157\\
+combined\_hard\_shift & minus\_branch\_entropy & 0.82750 & 0.02445 & 0.00000 & 0.01125 & 0.60136\\
+combined\_hard\_shift & minus\_calibration\_penalty & 0.83375 & 0.04133 & 0.00000 & 0.01500 & 0.60508\\
+combined\_hard\_shift & risk\_only\_score & 0.69375 & 0.03332 & 0.00250 & 0.02125 & 0.39384\\
+combined\_hard\_shift & expected\_utility\_only & 0.84500 & 0.02287 & 0.00125 & 0.01125 & 0.62484\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 0.72750 & 0.02499 & 0.00000 & 0.02125 & 0.45055\\
+adversarial\_compound\_shift & minus\_recovery\_success & 0.71500 & 0.03403 & 0.00500 & 0.01500 & 0.43325\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 0.71750 & 0.03371 & 0.00125 & 0.03000 & 0.42419\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 0.73375 & 0.03408 & 0.00000 & 0.01625 & 0.46507\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 0.75875 & 0.02759 & 0.00125 & 0.01500 & 0.50048\\
+adversarial\_compound\_shift & minus\_budget\_slack & 0.68500 & 0.03221 & 0.00125 & 0.02000 & 0.39147\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 0.73625 & 0.03172 & 0.00000 & 0.01000 & 0.47623\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 0.73125 & 0.02259 & 0.00000 & 0.01875 & 0.45930\\
+adversarial\_compound\_shift & risk\_only\_score & 0.55000 & 0.02608 & 0.00375 & 0.02625 & 0.18952\\
+adversarial\_compound\_shift & expected\_utility\_only & 0.76375 & 0.01982 & 0.00250 & 0.01750 & 0.50259\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\begin{figure}[t]
+
 \centering
-\includegraphics[width=0.86\linewidth]{recoverability_ablation.png}
-\caption{Ablations reveal that two removals improve the proposed method, which blocks a positive method claim.}
+
+\includegraphics[width=0.98\linewidth]{recoverability_ablation.png}
+
+\caption{Combined hard-shift ablations. Central removals do not consistently degrade the method.}
+
 \label{fig:ablation}
+
 \end{figure}
 
 \section{Stress Tests}
-We also sweep navigation difficulty, slip, trap severity, sensor uncertainty, and a combined stress axis. At maximum combined stress, the recoverability score reaches 0.851 goal success, the learned failure classifier reaches 0.845, and the oracle reaches 0.845. This stress slice is favorable to recoverability scoring, but it is not enough to overturn the main split: the proposed method still has nonzero irreversible failures and does not produce a decisive margin.
 
-\begin{figure}[tbp]
+The stress sweep exposes whether recoverability helps when deviations, traps, sensing uncertainty, and budget pressure rise together. At the maximum combined stress level, Recover-v5 reaches 0.516 success, while learned expected utility reaches 0.588 and the oracle reaches 0.625. The method therefore fails the maximum-stress dominance gate.
+
+\begin{figure}[t]
+
 \centering
-\includegraphics[width=0.90\linewidth]{recoverability_stress_sweep.png}
-\caption{Stress sweeps across five axes. The benchmark is useful for debugging, but the positive claim is not robust enough for ICLR main.}
+
+\includegraphics[width=0.98\linewidth]{recoverability_stress_sweep.png}
+
+\caption{Combined stress sweep across seven levels. Recover-v5 does not dominate the learned expected-utility baseline at the hardest level.}
+
 \label{fig:stress}
+
 \end{figure}
 
-\section{Why This Is Not Submission-Ready}
-The project fails the ICLR-main readiness gate for three independent reasons.
-\begin{itemize}
-\item \textbf{Evidence ceiling.} The benchmark is local and synthetic. It is deterministic and useful, but it is not hardware evidence, not a high-fidelity simulator benchmark, and not an accepted robotics suite.
-\item \textbf{Baseline ceiling.} A simple learned failure classifier is stronger than the proposed method on the main hard split. A positive paper would need a clearer gap against learned predictors and modern TAMP/replanning systems.
-\item \textbf{Objective ceiling.} Ablations show that the proposed objective is misspecified. Removing terms that should matter improves performance.
-\end{itemize}
+\begin{center}
+\scriptsize
+\begin{longtable}{cp{0.25\linewidth}ccccc}
+\caption{Combined stress sweep.}\label{tab:stress-combined}\\
+\toprule
+Level & Method & Success & CI95 & Irrev. & Damage & Safety utility\\
+\midrule
+\endfirsthead
+\caption[]{Combined stress sweep. (continued)}\\
+\toprule
+Level & Method & Success & CI95 & Irrev. & Damage & Safety utility\\
+\midrule
+\endhead
+0.00 & Robust margin & 0.68750 & 0.05846 & 0.00000 & 0.00625 & 0.38623\\
+0.00 & Contingent & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.84214\\
+0.00 & Learned risk & 0.99687 & 0.00612 & 0.00000 & 0.00313 & 0.85456\\
+0.00 & Learned EU & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.86344\\
+0.00 & CVaR recovery & 0.99687 & 0.00612 & 0.00000 & 0.00313 & 0.84911\\
+0.00 & Recover-v5 & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.85856\\
+0.00 & Oracle & 0.99687 & 0.00612 & 0.00000 & 0.00000 & 0.86165\\
+0.25 & Robust margin & 0.40937 & 0.07273 & 0.00000 & 0.02187 & -0.01608\\
+0.25 & Contingent & 0.95625 & 0.02274 & 0.00000 & 0.00313 & 0.78283\\
+0.25 & Learned risk & 0.98750 & 0.01354 & 0.00000 & 0.00313 & 0.84325\\
+0.25 & Learned EU & 0.98750 & 0.01000 & 0.00000 & 0.00000 & 0.84932\\
+0.25 & CVaR recovery & 0.98438 & 0.02092 & 0.00000 & 0.00000 & 0.83334\\
+0.25 & Recover-v5 & 0.98750 & 0.01354 & 0.00000 & 0.00000 & 0.83989\\
+0.25 & Oracle & 0.99062 & 0.00936 & 0.00000 & 0.00313 & 0.84978\\
+0.50 & Robust margin & 0.19062 & 0.06290 & 0.00625 & 0.03125 & -0.33485\\
+0.50 & Contingent & 0.89062 & 0.02092 & 0.00000 & 0.01250 & 0.67875\\
+0.50 & Learned risk & 0.94688 & 0.02424 & 0.00000 & 0.00937 & 0.77981\\
+0.50 & Learned EU & 0.95937 & 0.02052 & 0.00000 & 0.00625 & 0.80205\\
+0.50 & CVaR recovery & 0.95000 & 0.02082 & 0.00000 & 0.00313 & 0.77880\\
+0.50 & Recover-v5 & 0.93125 & 0.02000 & 0.00313 & 0.00625 & 0.75033\\
+0.50 & Oracle & 0.96562 & 0.02132 & 0.00000 & 0.00937 & 0.80627\\
+0.75 & Robust margin & 0.12187 & 0.03471 & 0.00625 & 0.05312 & -0.46050\\
+0.75 & Contingent & 0.78438 & 0.03589 & 0.00000 & 0.02187 & 0.52107\\
+0.75 & Learned risk & 0.83437 & 0.03985 & 0.00000 & 0.02500 & 0.60058\\
+0.75 & Learned EU & 0.86875 & 0.04454 & 0.00000 & 0.00937 & 0.66589\\
+0.75 & CVaR recovery & 0.81563 & 0.04784 & 0.00000 & 0.01875 & 0.57360\\
+0.75 & Recover-v5 & 0.78438 & 0.03589 & 0.00000 & 0.00937 & 0.54397\\
+0.75 & Oracle & 0.88750 & 0.04001 & 0.00000 & 0.01250 & 0.69522\\
+1.00 & Robust margin & 0.12500 & 0.04083 & 0.02813 & 0.06250 & -0.50444\\
+1.00 & Contingent & 0.68750 & 0.04565 & 0.00000 & 0.02187 & 0.38334\\
+1.00 & Learned risk & 0.73750 & 0.05018 & 0.00000 & 0.03125 & 0.45138\\
+1.00 & Learned EU & 0.78125 & 0.05084 & 0.00000 & 0.00937 & 0.54207\\
+1.00 & CVaR recovery & 0.76875 & 0.04204 & 0.00000 & 0.01250 & 0.51457\\
+1.00 & Recover-v5 & 0.71562 & 0.04229 & 0.00000 & 0.03125 & 0.41746\\
+1.00 & Oracle & 0.78125 & 0.03163 & 0.00000 & 0.01562 & 0.53586\\
+1.25 & Robust margin & 0.12812 & 0.04229 & 0.02500 & 0.06563 & -0.50471\\
+1.25 & Contingent & 0.47813 & 0.05558 & 0.00000 & 0.05000 & 0.05904\\
+1.25 & Learned risk & 0.63438 & 0.06263 & 0.00000 & 0.03438 & 0.30335\\
+1.25 & Learned EU & 0.66563 & 0.03879 & 0.00000 & 0.03125 & 0.35230\\
+1.25 & CVaR recovery & 0.62500 & 0.05628 & 0.00313 & 0.04688 & 0.26775\\
+1.25 & Recover-v5 & 0.66250 & 0.04814 & 0.00313 & 0.02813 & 0.34359\\
+1.25 & Oracle & 0.74375 & 0.05687 & 0.00000 & 0.02500 & 0.46962\\
+1.50 & Robust margin & 0.09688 & 0.03222 & 0.05625 & 0.13125 & -0.67746\\
+1.50 & Contingent & 0.29688 & 0.03196 & 0.00000 & 0.05937 & -0.20394\\
+1.50 & Learned risk & 0.50625 & 0.06246 & 0.00313 & 0.05312 & 0.09506\\
+1.50 & Learned EU & 0.58750 & 0.05973 & 0.00000 & 0.03750 & 0.23198\\
+1.50 & CVaR recovery & 0.44688 & 0.03658 & 0.01250 & 0.03125 & 0.02236\\
+1.50 & Recover-v5 & 0.51562 & 0.05864 & 0.00625 & 0.03750 & 0.12029\\
+1.50 & Oracle & 0.62500 & 0.06584 & 0.00000 & 0.04688 & 0.27470\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
 
-\section{What Would Be Required To Revive It}
-A future submission-worthy version would need to become a substantially new empirical project:
-\begin{itemize}
-\item evaluate on a real robot or a recognized high-fidelity manipulation/navigation benchmark;
-\item implement modern task-and-motion planning, contingent planning, and learned world-model baselines;
-\item train the recoverability score from data rather than hand-designing the score;
-\item report qualitative rollouts, failure videos, seed-level statistics, paired tests, and calibration curves;
-\item show that the score reduces irreversible physical errors without hiding cost or damage tradeoffs.
-\end{itemize}
+\section{Fixed-Risk Deployment}
+
+A paper about recoverability must answer a deployment question: can it execute only when the risk of irreversible or damaging failure is below a target budget? At budget 0.05, all learned and recoverability methods abstain on both hard fixed-risk splits; only the oracle maintains meaningful coverage. This is a severe limitation. The calibrated upper bound is conservative enough to avoid false-safe execution, but so conservative that it removes practical coverage.
+
+\begin{figure}[t]
+
+\centering
+
+\includegraphics[width=0.96\linewidth]{recoverability_fixed_risk.png}
+
+\caption{Fixed-risk deployment at budget 0.05 on combined hard shift. Non-oracle coverage collapses.}
+
+\label{fig:fixed-risk}
+
+\end{figure}
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.19\linewidth}cp{0.20\linewidth}cccc}
+\caption{Fixed-risk deployment over two hard splits and four budgets.}\label{tab:fixed-risk}\\
+\toprule
+Split & Budget & Method & Coverage & Fixed success & Executed success & False-safe\\
+\midrule
+\endfirsthead
+\caption[]{Fixed-risk deployment over two hard splits and four budgets. (continued)}\\
+\toprule
+Split & Budget & Method & Coverage & Fixed success & Executed success & False-safe\\
+\midrule
+\endhead
+combined\_hard\_shift & 0.02 & Conformal filter & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 0.14531 & 0.13281 & 0.89869 & 0.01250\\
+combined\_hard\_shift & 0.05 & Conformal filter & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Oracle & 0.85000 & 0.72187 & 0.84910 & 0.01099\\
+combined\_hard\_shift & 0.10 & Conformal filter & 0.02344 & 0.02187 & 0.09333 & 0.00667\\
+combined\_hard\_shift & 0.10 & Learned risk & 0.33125 & 0.27656 & 0.83413 & 0.00857\\
+combined\_hard\_shift & 0.10 & Learned EU & 0.29063 & 0.24531 & 0.84042 & 0.00714\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 0.02813 & 0.02344 & 0.08333 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 0.45469 & 0.38125 & 0.84389 & 0.00400\\
+combined\_hard\_shift & 0.10 & Oracle & 0.99844 & 0.84844 & 0.84965 & 0.01255\\
+combined\_hard\_shift & 0.20 & Conformal filter & 0.59063 & 0.51719 & 0.87434 & 0.01545\\
+combined\_hard\_shift & 0.20 & Learned risk & 0.82969 & 0.70781 & 0.85326 & 0.01303\\
+combined\_hard\_shift & 0.20 & Learned EU & 0.79219 & 0.67500 & 0.85147 & 0.00835\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 0.77187 & 0.61406 & 0.79331 & 0.01443\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 0.88437 & 0.73594 & 0.83242 & 0.00699\\
+combined\_hard\_shift & 0.20 & Oracle & 1.00000 & 0.85000 & 0.85000 & 0.01250\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 0.02656 & 0.01875 & 0.59286 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 0.60313 & 0.48906 & 0.81022 & 0.00476\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 0.01094 & 0.00937 & 0.08571 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 0.26250 & 0.20938 & 0.79222 & 0.00556\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 0.24062 & 0.19531 & 0.80935 & 0.00588\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 0.01719 & 0.01406 & 0.08182 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 0.38594 & 0.27969 & 0.72418 & 0.01080\\
+adversarial\_compound\_shift & 0.10 & Oracle & 0.99531 & 0.81250 & 0.81644 & 0.00945\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 0.51719 & 0.36875 & 0.71212 & 0.01649\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 0.79531 & 0.63594 & 0.80148 & 0.01360\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 0.74219 & 0.59219 & 0.80018 & 0.01041\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 0.69844 & 0.49844 & 0.71291 & 0.01725\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 0.79688 & 0.60000 & 0.75257 & 0.01567\\
+adversarial\_compound\_shift & 0.20 & Oracle & 1.00000 & 0.81719 & 0.81719 & 0.00937\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\section{Negative Cases}
+
+The negative cases are not anecdotes selected to flatter the method. They include v5 failures, strong-baseline failures, ablation counterexamples, fixed-risk false-safe examples when present, and fixed-risk abstentions. They make the reviewer-facing limitation concrete: recoverability is useful only if the score can separate recoverable deviations from irreversible ones without abstaining everywhere.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.15\linewidth}p{0.16\linewidth}p{0.18\linewidth}p{0.13\linewidth}p{0.15\linewidth}p{0.23\linewidth}}
+\caption{Retained negative cases.}\label{tab:negative-cases}\\
+\toprule
+Source & Split & Method & Plan & Outcome & Lesson\\
+\midrule
+\endfirsthead
+\caption[]{Retained negative cases. (continued)}\\
+\toprule
+Source & Split & Method & Plan & Outcome & Lesson\\
+\midrule
+\endhead
+v5\_main\_failure & open\_easy & recoverability\_score\_planner\_v5 & direct\_shortcut & unrecovered\_deviation & failure was detected but recovery action did not succeed\\
+v5\_main\_failure & open\_easy & recoverability\_score\_planner\_v5 & direct\_shortcut & damage\_or\_lost\_object & physical deviation damaged the object or lost manipulation state\\
+strong\_baseline\_failure & open\_easy & cvar\_recovery\_planner & direct\_shortcut & irreversible\_trap & nominally feasible plan entered a state with no cheap recovery branch\\
+strong\_baseline\_failure & open\_easy & contingent\_replanner & dual\_recovery\_branch & unrecovered\_deviation & failure was detected but recovery action did not succeed\\
+v5\_main\_failure & narrow\_passage\_shift & recoverability\_score\_planner\_v5 & dual\_recovery\_branch & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & learned\_expected\_utility & diagnostic\_staging & unrecovered\_deviation & failure was detected but recovery action did not succeed\\
+strong\_baseline\_failure & narrow\_passage\_shift & contingent\_replanner & dual\_recovery\_branch & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & learned\_expected\_utility & reversible\_probe & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & cvar\_recovery\_planner & dual\_recovery\_branch & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & cvar\_recovery\_planner & diagnostic\_staging & budget\_overrun & recovery existed but consumed too much budget\\
+v5\_main\_failure & narrow\_passage\_shift & recoverability\_score\_planner\_v5 & diagnostic\_staging & budget\_overrun & recovery existed but consumed too much budget\\
+v5\_main\_failure & narrow\_passage\_shift & recoverability\_score\_planner\_v5 & reversible\_probe & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & learned\_expected\_utility & dual\_recovery\_branch & budget\_overrun & recovery existed but consumed too much budget\\
+v5\_main\_failure & narrow\_passage\_shift & recoverability\_score\_planner\_v5 & contingency\_branch & damage\_or\_lost\_object & physical deviation damaged the object or lost manipulation state\\
+strong\_baseline\_failure & narrow\_passage\_shift & contingent\_replanner & contingency\_branch & budget\_overrun & recovery existed but consumed too much budget\\
+v5\_main\_failure & narrow\_passage\_shift & recoverability\_score\_planner\_v5 & contingency\_branch & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & learned\_expected\_utility & diagnostic\_staging & damage\_or\_lost\_object & physical deviation damaged the object or lost manipulation state\\
+v5\_main\_failure & narrow\_passage\_shift & recoverability\_score\_planner\_v5 & robust\_margin\_route & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & cvar\_recovery\_planner & reversible\_probe & damage\_or\_lost\_object & physical deviation damaged the object or lost manipulation state\\
+strong\_baseline\_failure & narrow\_passage\_shift & cvar\_recovery\_planner & reversible\_probe & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & cvar\_recovery\_planner & contingency\_branch & budget\_overrun & recovery existed but consumed too much budget\\
+v5\_main\_failure & narrow\_passage\_shift & recoverability\_score\_planner\_v5 & diagnostic\_staging & unrecovered\_deviation & failure was detected but recovery action did not succeed\\
+strong\_baseline\_failure & narrow\_passage\_shift & learned\_expected\_utility & diagnostic\_staging & budget\_overrun & recovery existed but consumed too much budget\\
+strong\_baseline\_failure & narrow\_passage\_shift & learned\_expected\_utility & reversible\_probe & unrecovered\_deviation & failure was detected but recovery action did not succeed\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\section{Reviewer Attack Surface}
+
+A hostile reviewer can make at least four fair attacks. First, learned expected utility already absorbs the same signals and wins. Second, fixed-risk abstention shows that the calibration story is not deployable yet. Third, ablations reveal that some score terms are not necessary. Fourth, the entire result remains local and generated, with no hardware or recognized high-fidelity simulator validation. The manuscript should invite these attacks rather than pretending they do not exist.
+
+The strongest defense is modest: the repository now provides a reproducible failure analysis at meaningful scale. It separates a plausible robotics hypothesis from an unsupported submission claim. That is useful for deciding what to build next, but it is not enough for ICLR main.
 
 \section{Reproducibility}
-Run the benchmark from the repository root:
+
 \begin{verbatim}
+
 python src\run_experiment.py
+
+python scripts\generate_manuscript.py
+
+cd paper
+
+pdflatex -interaction=nonstopmode -halt-on-error main.tex
+
+bibtex main
+
+pdflatex -interaction=nonstopmode -halt-on-error main.tex
+
+pdflatex -interaction=nonstopmode -halt-on-error main.tex
+
+python ..\scripts\validate_submission_artifacts.py
+
 \end{verbatim}
-The script writes \texttt{rollouts.csv}, \texttt{metrics.csv}, \texttt{pairwise\_stats.csv}, \texttt{ablation\_metrics.csv}, \texttt{stress\_sweep.csv}, \texttt{negative\_cases.csv}, \texttt{summary.txt}, and the figures used in this manuscript. The canonical local PDF is \texttt{C:/Users/wangz/Downloads/82.pdf}.
+
+The canonical numbered PDF is \texttt{C:/Users/wangz/Downloads/82.pdf}. No PDF should be copied to the visible Desktop. The validator checks row counts, page count, link settings, unresolved references, artifact placement, and SHA256.
+
+\section{Limitations}
+
+The limitations are not boilerplate. The local generator may not capture contact dynamics, perception failure, or planner engineering constraints of real systems. The learned baselines are still lightweight ridge models, so stronger neural or TAMP-specific baselines could widen the gap further. The oracle uses hidden probabilities and exists only as a ceiling. The fixed-risk calibration is population-bound and fails to provide useful non-oracle coverage at the strict budget. The related-work pool is broad but still needs manual expert vetting before any real submission.
 
 \section{Conclusion}
-The recoverability idea remains research-interesting: nominal feasibility is plainly inadequate when physical deviations create irreversible traps. But the present v4 evidence does not justify an ICLR-main submission. The correct action is to archive Paper82 as a negative, reproducible evidence audit and move to the next paper.
+
+Recoverability remains a good robotics question: plans should be judged by what remains possible after the world pushes them off the nominal path. But the v5 evidence says this particular hand-designed recoverability score is not yet the answer. A learned expected-utility baseline wins the hard aggregate, ablations expose misspecification, fixed-risk coverage collapses, and maximum stress is dominated. The honest action is to archive Paper 82 as a strong negative diagnostic and move to the next paper.
+
+\appendix
+
+\section{Full Split Metrics}
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.22\linewidth}p{0.22\linewidth}cccc}
+\caption{Per-split metrics for all methods.}\label{tab:split-metrics}\\
+\toprule
+Split & Method & Success & Safety utility & Irrev. & Damage\\
+\midrule
+\endfirsthead
+\caption[]{Per-split metrics for all methods. (continued)}\\
+\toprule
+Split & Method & Success & Safety utility & Irrev. & Damage\\
+\midrule
+\endhead
+adversarial\_compound\_shift & Nominal & 0.552 +/- 0.034 & -0.433 +/- 0.117 & 0.2437 & 0.3094\\
+adversarial\_compound\_shift & Risk-averse & 0.575 +/- 0.028 & 0.226 +/- 0.048 & 0.0047 & 0.0234\\
+adversarial\_compound\_shift & Robust margin & 0.144 +/- 0.015 & -0.441 +/- 0.035 & 0.0063 & 0.0625\\
+adversarial\_compound\_shift & Expected cost & 0.773 +/- 0.027 & 0.458 +/- 0.062 & 0.0172 & 0.0516\\
+adversarial\_compound\_shift & Contingent & 0.531 +/- 0.045 & 0.189 +/- 0.066 & 0.0000 & 0.0109\\
+adversarial\_compound\_shift & RH replanner & 0.733 +/- 0.033 & 0.461 +/- 0.048 & 0.0000 & 0.0203\\
+adversarial\_compound\_shift & Conformal filter & 0.750 +/- 0.027 & 0.493 +/- 0.047 & 0.0016 & 0.0125\\
+adversarial\_compound\_shift & Learned risk & 0.789 +/- 0.043 & 0.549 +/- 0.066 & 0.0000 & 0.0141\\
+adversarial\_compound\_shift & Learned EU & 0.806 +/- 0.030 & 0.574 +/- 0.044 & 0.0000 & 0.0141\\
+adversarial\_compound\_shift & Branch entropy & 0.353 +/- 0.045 & -0.058 +/- 0.062 & 0.0000 & 0.0109\\
+adversarial\_compound\_shift & CVaR recovery & 0.722 +/- 0.029 & 0.433 +/- 0.048 & 0.0031 & 0.0250\\
+adversarial\_compound\_shift & Recover-v5 & 0.734 +/- 0.037 & 0.459 +/- 0.064 & 0.0000 & 0.0219\\
+adversarial\_compound\_shift & Oracle & 0.817 +/- 0.026 & 0.595 +/- 0.033 & 0.0000 & 0.0094\\
+budget\_tight\_shift & Nominal & 0.739 +/- 0.024 & 0.250 +/- 0.053 & 0.0844 & 0.1453\\
+budget\_tight\_shift & Risk-averse & 0.531 +/- 0.034 & 0.195 +/- 0.048 & 0.0000 & 0.0125\\
+budget\_tight\_shift & Robust margin & 0.141 +/- 0.029 & -0.383 +/- 0.046 & 0.0031 & 0.0234\\
+budget\_tight\_shift & Expected cost & 0.833 +/- 0.021 & 0.546 +/- 0.048 & 0.0219 & 0.0531\\
+budget\_tight\_shift & Contingent & 0.372 +/- 0.035 & -0.012 +/- 0.049 & 0.0000 & 0.0047\\
+budget\_tight\_shift & RH replanner & 0.795 +/- 0.030 & 0.578 +/- 0.039 & 0.0000 & 0.0016\\
+budget\_tight\_shift & Conformal filter & 0.775 +/- 0.035 & 0.541 +/- 0.051 & 0.0000 & 0.0094\\
+budget\_tight\_shift & Learned risk & 0.786 +/- 0.028 & 0.565 +/- 0.039 & 0.0000 & 0.0016\\
+budget\_tight\_shift & Learned EU & 0.875 +/- 0.027 & 0.689 +/- 0.038 & 0.0000 & 0.0016\\
+budget\_tight\_shift & Branch entropy & 0.089 +/- 0.021 & -0.408 +/- 0.031 & 0.0000 & 0.0078\\
+budget\_tight\_shift & CVaR recovery & 0.758 +/- 0.046 & 0.516 +/- 0.061 & 0.0000 & 0.0094\\
+budget\_tight\_shift & Recover-v5 & 0.769 +/- 0.042 & 0.533 +/- 0.059 & 0.0000 & 0.0078\\
+budget\_tight\_shift & Oracle & 0.878 +/- 0.027 & 0.692 +/- 0.038 & 0.0000 & 0.0031\\
+combined\_hard\_shift & Nominal & 0.606 +/- 0.031 & -0.182 +/- 0.093 & 0.1828 & 0.2344\\
+combined\_hard\_shift & Risk-averse & 0.698 +/- 0.031 & 0.395 +/- 0.053 & 0.0063 & 0.0219\\
+combined\_hard\_shift & Robust margin & 0.166 +/- 0.036 & -0.371 +/- 0.056 & 0.0031 & 0.0375\\
+combined\_hard\_shift & Expected cost & 0.825 +/- 0.022 & 0.555 +/- 0.049 & 0.0172 & 0.0328\\
+combined\_hard\_shift & Contingent & 0.787 +/- 0.031 & 0.536 +/- 0.048 & 0.0000 & 0.0125\\
+combined\_hard\_shift & RH replanner & 0.827 +/- 0.030 & 0.601 +/- 0.047 & 0.0000 & 0.0125\\
+combined\_hard\_shift & Conformal filter & 0.858 +/- 0.032 & 0.644 +/- 0.044 & 0.0000 & 0.0141\\
+combined\_hard\_shift & Learned risk & 0.852 +/- 0.027 & 0.640 +/- 0.041 & 0.0000 & 0.0109\\
+combined\_hard\_shift & Learned EU & 0.850 +/- 0.034 & 0.640 +/- 0.051 & 0.0000 & 0.0094\\
+combined\_hard\_shift & Branch entropy & 0.755 +/- 0.026 & 0.492 +/- 0.037 & 0.0000 & 0.0063\\
+combined\_hard\_shift & CVaR recovery & 0.809 +/- 0.034 & 0.572 +/- 0.054 & 0.0000 & 0.0141\\
+combined\_hard\_shift & Recover-v5 & 0.836 +/- 0.022 & 0.616 +/- 0.034 & 0.0016 & 0.0063\\
+combined\_hard\_shift & Oracle & 0.850 +/- 0.035 & 0.640 +/- 0.052 & 0.0000 & 0.0125\\
+irreversible\_commitment & Nominal & 0.773 +/- 0.024 & 0.265 +/- 0.087 & 0.1109 & 0.1469\\
+irreversible\_commitment & Risk-averse & 0.833 +/- 0.015 & 0.608 +/- 0.024 & 0.0000 & 0.0094\\
+irreversible\_commitment & Robust margin & 0.184 +/- 0.029 & -0.320 +/- 0.044 & 0.0031 & 0.0219\\
+irreversible\_commitment & Expected cost & 0.931 +/- 0.022 & 0.728 +/- 0.035 & 0.0141 & 0.0219\\
+irreversible\_commitment & Contingent & 0.945 +/- 0.009 & 0.764 +/- 0.012 & 0.0000 & 0.0047\\
+irreversible\_commitment & RH replanner & 0.983 +/- 0.008 & 0.835 +/- 0.013 & 0.0000 & 0.0016\\
+irreversible\_commitment & Conformal filter & 0.972 +/- 0.010 & 0.817 +/- 0.017 & 0.0000 & 0.0047\\
+irreversible\_commitment & Learned risk & 0.991 +/- 0.007 & 0.846 +/- 0.009 & 0.0000 & 0.0000\\
+irreversible\_commitment & Learned EU & 0.980 +/- 0.012 & 0.835 +/- 0.014 & 0.0000 & 0.0000\\
+irreversible\_commitment & Branch entropy & 0.912 +/- 0.019 & 0.713 +/- 0.029 & 0.0000 & 0.0016\\
+irreversible\_commitment & CVaR recovery & 0.978 +/- 0.011 & 0.823 +/- 0.018 & 0.0000 & 0.0031\\
+irreversible\_commitment & Recover-v5 & 0.977 +/- 0.008 & 0.822 +/- 0.013 & 0.0000 & 0.0016\\
+irreversible\_commitment & Oracle & 0.977 +/- 0.008 & 0.827 +/- 0.014 & 0.0000 & 0.0047\\
+latent\_mode\_shift & Nominal & 0.645 +/- 0.047 & -0.007 +/- 0.139 & 0.1203 & 0.2047\\
+latent\_mode\_shift & Risk-averse & 0.792 +/- 0.029 & 0.545 +/- 0.046 & 0.0000 & 0.0141\\
+latent\_mode\_shift & Robust margin & 0.145 +/- 0.027 & -0.413 +/- 0.036 & 0.0094 & 0.0422\\
+latent\_mode\_shift & Expected cost & 0.877 +/- 0.030 & 0.619 +/- 0.057 & 0.0203 & 0.0406\\
+latent\_mode\_shift & Contingent & 0.873 +/- 0.034 & 0.661 +/- 0.050 & 0.0000 & 0.0078\\
+latent\_mode\_shift & RH replanner & 0.925 +/- 0.017 & 0.746 +/- 0.025 & 0.0000 & 0.0094\\
+latent\_mode\_shift & Conformal filter & 0.917 +/- 0.025 & 0.737 +/- 0.039 & 0.0000 & 0.0078\\
+latent\_mode\_shift & Learned risk & 0.906 +/- 0.016 & 0.723 +/- 0.023 & 0.0000 & 0.0047\\
+latent\_mode\_shift & Learned EU & 0.934 +/- 0.018 & 0.768 +/- 0.026 & 0.0000 & 0.0016\\
+latent\_mode\_shift & Branch entropy & 0.816 +/- 0.037 & 0.579 +/- 0.049 & 0.0000 & 0.0031\\
+latent\_mode\_shift & CVaR recovery & 0.903 +/- 0.038 & 0.710 +/- 0.055 & 0.0000 & 0.0094\\
+latent\_mode\_shift & Recover-v5 & 0.905 +/- 0.020 & 0.717 +/- 0.032 & 0.0000 & 0.0063\\
+latent\_mode\_shift & Oracle & 0.955 +/- 0.012 & 0.798 +/- 0.018 & 0.0000 & 0.0031\\
+narrow\_passage\_shift & Nominal & 0.702 +/- 0.033 & 0.135 +/- 0.086 & 0.1016 & 0.1766\\
+narrow\_passage\_shift & Risk-averse & 0.847 +/- 0.039 & 0.626 +/- 0.062 & 0.0016 & 0.0078\\
+narrow\_passage\_shift & Robust margin & 0.258 +/- 0.028 & -0.211 +/- 0.042 & 0.0031 & 0.0125\\
+narrow\_passage\_shift & Expected cost & 0.905 +/- 0.033 & 0.687 +/- 0.062 & 0.0125 & 0.0266\\
+narrow\_passage\_shift & Contingent & 0.917 +/- 0.021 & 0.724 +/- 0.029 & 0.0000 & 0.0031\\
+narrow\_passage\_shift & RH replanner & 0.961 +/- 0.017 & 0.804 +/- 0.022 & 0.0000 & 0.0016\\
+narrow\_passage\_shift & Conformal filter & 0.975 +/- 0.015 & 0.823 +/- 0.023 & 0.0000 & 0.0031\\
+narrow\_passage\_shift & Learned risk & 0.970 +/- 0.008 & 0.818 +/- 0.011 & 0.0000 & 0.0000\\
+narrow\_passage\_shift & Learned EU & 0.973 +/- 0.011 & 0.821 +/- 0.017 & 0.0000 & 0.0047\\
+narrow\_passage\_shift & Branch entropy & 0.894 +/- 0.030 & 0.683 +/- 0.045 & 0.0000 & 0.0031\\
+narrow\_passage\_shift & CVaR recovery & 0.958 +/- 0.019 & 0.794 +/- 0.029 & 0.0000 & 0.0016\\
+narrow\_passage\_shift & Recover-v5 & 0.950 +/- 0.012 & 0.782 +/- 0.019 & 0.0000 & 0.0031\\
+narrow\_passage\_shift & Oracle & 0.980 +/- 0.010 & 0.831 +/- 0.013 & 0.0000 & 0.0047\\
+object\_slip\_shift & Nominal & 0.723 +/- 0.023 & 0.291 +/- 0.074 & 0.0453 & 0.1391\\
+object\_slip\_shift & Risk-averse & 0.875 +/- 0.019 & 0.659 +/- 0.039 & 0.0016 & 0.0141\\
+object\_slip\_shift & Robust margin & 0.237 +/- 0.034 & -0.248 +/- 0.055 & 0.0000 & 0.0266\\
+object\_slip\_shift & Expected cost & 0.866 +/- 0.023 & 0.584 +/- 0.052 & 0.0203 & 0.0688\\
+object\_slip\_shift & Contingent & 0.934 +/- 0.018 & 0.743 +/- 0.024 & 0.0000 & 0.0094\\
+object\_slip\_shift & RH replanner & 0.981 +/- 0.012 & 0.832 +/- 0.018 & 0.0000 & 0.0047\\
+object\_slip\_shift & Conformal filter & 0.980 +/- 0.010 & 0.828 +/- 0.018 & 0.0000 & 0.0078\\
+object\_slip\_shift & Learned risk & 0.981 +/- 0.013 & 0.827 +/- 0.024 & 0.0000 & 0.0078\\
+object\_slip\_shift & Learned EU & 0.991 +/- 0.007 & 0.846 +/- 0.012 & 0.0000 & 0.0031\\
+object\_slip\_shift & Branch entropy & 0.928 +/- 0.017 & 0.725 +/- 0.030 & 0.0000 & 0.0094\\
+object\_slip\_shift & CVaR recovery & 0.967 +/- 0.018 & 0.801 +/- 0.032 & 0.0000 & 0.0109\\
+object\_slip\_shift & Recover-v5 & 0.967 +/- 0.013 & 0.807 +/- 0.021 & 0.0000 & 0.0047\\
+object\_slip\_shift & Oracle & 0.994 +/- 0.005 & 0.852 +/- 0.009 & 0.0000 & 0.0031\\
+open\_easy & Nominal & 0.887 +/- 0.023 & 0.715 +/- 0.043 & 0.0047 & 0.0578\\
+open\_easy & Risk-averse & 0.980 +/- 0.008 & 0.825 +/- 0.012 & 0.0000 & 0.0031\\
+open\_easy & Robust margin & 0.880 +/- 0.031 & 0.637 +/- 0.052 & 0.0000 & 0.0141\\
+open\_easy & Expected cost & 0.909 +/- 0.021 & 0.733 +/- 0.049 & 0.0063 & 0.0547\\
+open\_easy & Contingent & 0.998 +/- 0.003 & 0.841 +/- 0.003 & 0.0000 & 0.0000\\
+open\_easy & RH replanner & 1.000 +/- 0.000 & 0.863 +/- 0.000 & 0.0000 & 0.0000\\
+open\_easy & Conformal filter & 1.000 +/- 0.000 & 0.862 +/- 0.001 & 0.0000 & 0.0000\\
+open\_easy & Learned risk & 1.000 +/- 0.000 & 0.862 +/- 0.001 & 0.0000 & 0.0000\\
+open\_easy & Learned EU & 1.000 +/- 0.000 & 0.864 +/- 0.000 & 0.0000 & 0.0000\\
+open\_easy & Branch entropy & 1.000 +/- 0.000 & 0.835 +/- 0.000 & 0.0000 & 0.0000\\
+open\_easy & CVaR recovery & 0.998 +/- 0.003 & 0.852 +/- 0.012 & 0.0016 & 0.0016\\
+open\_easy & Recover-v5 & 0.995 +/- 0.007 & 0.851 +/- 0.012 & 0.0000 & 0.0031\\
+open\_easy & Oracle & 1.000 +/- 0.000 & 0.865 +/- 0.000 & 0.0000 & 0.0000\\
+sensor\_dropout\_shift & Nominal & 0.741 +/- 0.031 & 0.279 +/- 0.092 & 0.0656 & 0.1437\\
+sensor\_dropout\_shift & Risk-averse & 0.827 +/- 0.032 & 0.590 +/- 0.053 & 0.0031 & 0.0141\\
+sensor\_dropout\_shift & Robust margin & 0.202 +/- 0.037 & -0.310 +/- 0.054 & 0.0031 & 0.0312\\
+sensor\_dropout\_shift & Expected cost & 0.889 +/- 0.013 & 0.638 +/- 0.032 & 0.0187 & 0.0469\\
+sensor\_dropout\_shift & Contingent & 0.934 +/- 0.014 & 0.743 +/- 0.024 & 0.0000 & 0.0109\\
+sensor\_dropout\_shift & RH replanner & 0.975 +/- 0.010 & 0.818 +/- 0.019 & 0.0000 & 0.0078\\
+sensor\_dropout\_shift & Conformal filter & 0.972 +/- 0.011 & 0.818 +/- 0.017 & 0.0000 & 0.0016\\
+sensor\_dropout\_shift & Learned risk & 0.963 +/- 0.018 & 0.803 +/- 0.030 & 0.0000 & 0.0078\\
+sensor\_dropout\_shift & Learned EU & 0.975 +/- 0.010 & 0.824 +/- 0.016 & 0.0000 & 0.0063\\
+sensor\_dropout\_shift & Branch entropy & 0.933 +/- 0.022 & 0.743 +/- 0.030 & 0.0000 & 0.0000\\
+sensor\_dropout\_shift & CVaR recovery & 0.958 +/- 0.015 & 0.789 +/- 0.025 & 0.0000 & 0.0063\\
+sensor\_dropout\_shift & Recover-v5 & 0.959 +/- 0.014 & 0.789 +/- 0.028 & 0.0016 & 0.0063\\
+sensor\_dropout\_shift & Oracle & 0.981 +/- 0.011 & 0.832 +/- 0.016 & 0.0000 & 0.0063\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\section{Full Hard-Aggregate Pairwise Table}
+
+The main text reports the paired comparison against the strongest non-oracle baseline. The full paired table is included here to make clear that the decision does not depend on selectively choosing one reference or one metric.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.22\linewidth}p{0.22\linewidth}cccc}
+\caption{All hard-regime aggregate paired seed differences for Recover-v5.}\label{tab:full-pairwise}\\
+\toprule
+Reference & Metric & Mean diff & CI95 & Lower95 & Better seeds\\
+\midrule
+\endfirsthead
+\caption[]{All hard-regime aggregate paired seed differences for Recover-v5. (continued)}\\
+\toprule
+Reference & Metric & Mean diff & CI95 & Lower95 & Better seeds\\
+\midrule
+\endhead
+Robust margin & goal\_success & 0.70254 & 0.01219 & 0.69035 & 10/10\\
+Robust margin & recovery\_success & 0.28119 & 0.02913 & 0.25206 & 10/10\\
+Robust margin & irreversible\_failure & -0.00352 & 0.00149 & -0.00500 & 9/10\\
+Robust margin & damage & -0.02500 & 0.00544 & -0.03044 & 10/10\\
+Robust margin & total\_cost & -0.53777 & 0.01023 & -0.54800 & 10/10\\
+Robust margin & calibration\_error & -0.55652 & 0.00736 & -0.56388 & 10/10\\
+Robust margin & safety\_utility & 1.02781 & 0.01656 & 1.01125 & 10/10\\
+Contingent & goal\_success & 0.10019 & 0.01011 & 0.09008 & 10/10\\
+Contingent & recovery\_success & -0.04716 & 0.03691 & -0.08407 & 2/10\\
+Contingent & irreversible\_failure & 0.00039 & 0.00051 & -0.00012 & 0/10\\
+Contingent & damage & -0.00078 & 0.00424 & -0.00502 & 5/10\\
+Contingent & total\_cost & -0.14201 & 0.00894 & -0.15096 & 10/10\\
+Contingent & calibration\_error & -0.12060 & 0.00854 & -0.12914 & 10/10\\
+Contingent & safety\_utility & 0.14715 & 0.01607 & 0.13108 & 10/10\\
+Conformal filter & goal\_success & -0.01269 & 0.00924 & -0.02194 & 2/10\\
+Conformal filter & recovery\_success & 0.01247 & 0.02929 & -0.01682 & 6/10\\
+Conformal filter & irreversible\_failure & 0.00019 & 0.00069 & -0.00049 & 1/10\\
+Conformal filter & damage & -0.00039 & 0.00266 & -0.00306 & 4/10\\
+Conformal filter & total\_cost & 0.04946 & 0.00771 & 0.04175 & 0/10\\
+Conformal filter & calibration\_error & -0.01567 & 0.00910 & -0.02477 & 9/10\\
+Conformal filter & safety\_utility & -0.02200 & 0.01273 & -0.03473 & 2/10\\
+Learned risk & goal\_success & -0.01758 & 0.01074 & -0.02832 & 2/10\\
+Learned risk & recovery\_success & 0.00535 & 0.02594 & -0.02058 & 4/10\\
+Learned risk & irreversible\_failure & 0.00039 & 0.00051 & -0.00012 & 0/10\\
+Learned risk & damage & 0.00137 & 0.00243 & -0.00106 & 3/10\\
+Learned risk & total\_cost & 0.04536 & 0.00768 & 0.03768 & 0/10\\
+Learned risk & calibration\_error & -0.03519 & 0.00954 & -0.04473 & 10/10\\
+Learned risk & safety\_utility & -0.03057 & 0.01614 & -0.04671 & 2/10\\
+Learned EU & goal\_success & -0.03594 & 0.01288 & -0.04882 & 0/10\\
+Learned EU & recovery\_success & 0.00188 & 0.03609 & -0.03420 & 4/10\\
+Learned EU & irreversible\_failure & 0.00039 & 0.00051 & -0.00012 & 0/10\\
+Learned EU & damage & 0.00215 & 0.00264 & -0.00050 & 4/10\\
+Learned EU & total\_cost & 0.07953 & 0.00856 & 0.07097 & 0/10\\
+Learned EU & calibration\_error & -0.02803 & 0.01159 & -0.03962 & 9/10\\
+Learned EU & safety\_utility & -0.05903 & 0.01864 & -0.07767 & 0/10\\
+CVaR recovery & goal\_success & 0.00547 & 0.01330 & -0.00783 & 5/10\\
+CVaR recovery & recovery\_success & 0.02713 & 0.03821 & -0.01107 & 8/10\\
+CVaR recovery & irreversible\_failure & 0.00000 & 0.00081 & -0.00081 & 2/10\\
+CVaR recovery & damage & -0.00274 & 0.00275 & -0.00548 & 6/10\\
+CVaR recovery & total\_cost & -0.01146 & 0.00933 & -0.02079 & 8/10\\
+CVaR recovery & calibration\_error & -0.00329 & 0.01152 & -0.01482 & 5/10\\
+CVaR recovery & safety\_utility & 0.01090 & 0.02058 & -0.00969 & 5/10\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\section{Full Stress Sweep Across All Axes}
+
+The main text focuses on the combined stress axis because it is the hardest single diagnostic. For auditability, Table~\ref{tab:full-stress} reports every predefined stress axis, level, method, and aggregate metric.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.13\linewidth}cp{0.20\linewidth}ccccc}
+\caption{All stress axes, levels, and methods.}\label{tab:full-stress}\\
+\toprule
+Axis & Level & Method & Success & CI95 & Irrev. & Damage & Safety utility\\
+\midrule
+\endfirsthead
+\caption[]{All stress axes, levels, and methods. (continued)}\\
+\toprule
+Axis & Level & Method & Success & CI95 & Irrev. & Damage & Safety utility\\
+\midrule
+\endhead
+navigation & 0.00 & Robust margin & 0.21875 & 0.05001 & 0.00000 & 0.01562 & -0.26386\\
+navigation & 0.00 & Contingent & 0.96875 & 0.00913 & 0.00000 & 0.00000 & 0.80081\\
+navigation & 0.00 & Learned risk & 0.99062 & 0.00936 & 0.00000 & 0.00313 & 0.84488\\
+navigation & 0.00 & Learned EU & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.86307\\
+navigation & 0.00 & CVaR recovery & 0.99062 & 0.01838 & 0.00000 & 0.00000 & 0.84491\\
+navigation & 0.00 & Recover-v5 & 0.99375 & 0.00817 & 0.00000 & 0.00000 & 0.85045\\
+navigation & 0.00 & Oracle & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.86380\\
+navigation & 0.25 & Robust margin & 0.26875 & 0.06597 & 0.00000 & 0.01250 & -0.18961\\
+navigation & 0.25 & Contingent & 0.96562 & 0.01429 & 0.00000 & 0.00000 & 0.79638\\
+navigation & 0.25 & Learned risk & 0.98750 & 0.01000 & 0.00000 & 0.00313 & 0.84174\\
+navigation & 0.25 & Learned EU & 0.99062 & 0.01307 & 0.00000 & 0.00000 & 0.84882\\
+navigation & 0.25 & CVaR recovery & 0.97500 & 0.01780 & 0.00000 & 0.00000 & 0.82110\\
+navigation & 0.25 & Recover-v5 & 0.99687 & 0.00612 & 0.00000 & 0.00000 & 0.85152\\
+navigation & 0.25 & Oracle & 0.99687 & 0.00612 & 0.00000 & 0.00000 & 0.85965\\
+navigation & 0.50 & Robust margin & 0.21875 & 0.05001 & 0.00000 & 0.03438 & -0.28795\\
+navigation & 0.50 & Contingent & 0.91875 & 0.01871 & 0.00000 & 0.00000 & 0.73249\\
+navigation & 0.50 & Learned risk & 0.97813 & 0.01838 & 0.00000 & 0.00000 & 0.83282\\
+navigation & 0.50 & Learned EU & 0.99062 & 0.01307 & 0.00000 & 0.00313 & 0.84576\\
+navigation & 0.50 & CVaR recovery & 0.95000 & 0.02274 & 0.00000 & 0.01250 & 0.77151\\
+navigation & 0.50 & Recover-v5 & 0.97813 & 0.01307 & 0.00000 & 0.00313 & 0.82324\\
+navigation & 0.50 & Oracle & 0.98750 & 0.01000 & 0.00000 & 0.00313 & 0.84421\\
+navigation & 0.75 & Robust margin & 0.22500 & 0.05149 & 0.00313 & 0.02813 & -0.27560\\
+navigation & 0.75 & Contingent & 0.93437 & 0.02132 & 0.00000 & 0.00313 & 0.75064\\
+navigation & 0.75 & Learned risk & 0.96562 & 0.02492 & 0.00000 & 0.00313 & 0.81096\\
+navigation & 0.75 & Learned EU & 0.97813 & 0.01838 & 0.00000 & 0.00625 & 0.82666\\
+navigation & 0.75 & CVaR recovery & 0.96875 & 0.01581 & 0.00000 & 0.00313 & 0.80585\\
+navigation & 0.75 & Recover-v5 & 0.96875 & 0.01581 & 0.00000 & 0.00313 & 0.80819\\
+navigation & 0.75 & Oracle & 0.98125 & 0.01633 & 0.00000 & 0.00313 & 0.83657\\
+navigation & 1.00 & Robust margin & 0.20938 & 0.03770 & 0.00313 & 0.04375 & -0.31562\\
+navigation & 1.00 & Contingent & 0.90625 & 0.02237 & 0.00000 & 0.00625 & 0.71053\\
+navigation & 1.00 & Learned risk & 0.96250 & 0.02000 & 0.00000 & 0.00313 & 0.80801\\
+navigation & 1.00 & Learned EU & 0.98438 & 0.01370 & 0.00313 & 0.00625 & 0.82778\\
+navigation & 1.00 & CVaR recovery & 0.96875 & 0.01826 & 0.00000 & 0.01250 & 0.79643\\
+navigation & 1.00 & Recover-v5 & 0.97188 & 0.01099 & 0.00000 & 0.00313 & 0.81332\\
+navigation & 1.00 & Oracle & 0.98438 & 0.01370 & 0.00000 & 0.00313 & 0.83983\\
+navigation & 1.25 & Robust margin & 0.18438 & 0.04696 & 0.00000 & 0.04063 & -0.34562\\
+navigation & 1.25 & Contingent & 0.88438 & 0.03298 & 0.00000 & 0.00313 & 0.67905\\
+navigation & 1.25 & Learned risk & 0.96875 & 0.01581 & 0.00000 & 0.00313 & 0.81659\\
+navigation & 1.25 & Learned EU & 0.98438 & 0.01370 & 0.00000 & 0.00625 & 0.83398\\
+navigation & 1.25 & CVaR recovery & 0.95312 & 0.01882 & 0.00000 & 0.01250 & 0.77580\\
+navigation & 1.25 & Recover-v5 & 0.94375 & 0.03742 & 0.00000 & 0.00625 & 0.77531\\
+navigation & 1.25 & Oracle & 0.96875 & 0.01826 & 0.00000 & 0.00625 & 0.81974\\
+navigation & 1.50 & Robust margin & 0.18438 & 0.04870 & 0.00937 & 0.03750 & -0.35296\\
+navigation & 1.50 & Contingent & 0.84375 & 0.05402 & 0.00000 & 0.00625 & 0.61742\\
+navigation & 1.50 & Learned risk & 0.95625 & 0.02615 & 0.00000 & 0.00625 & 0.79592\\
+navigation & 1.50 & Learned EU & 0.97188 & 0.02492 & 0.00000 & 0.00937 & 0.81267\\
+navigation & 1.50 & CVaR recovery & 0.94375 & 0.01225 & 0.00000 & 0.00937 & 0.76506\\
+navigation & 1.50 & Recover-v5 & 0.94063 & 0.01696 & 0.00000 & 0.00625 & 0.76473\\
+navigation & 1.50 & Oracle & 0.96562 & 0.01926 & 0.00000 & 0.00937 & 0.80822\\
+slip & 0.00 & Robust margin & 0.29375 & 0.04492 & 0.00000 & 0.00625 & -0.14497\\
+slip & 0.00 & Contingent & 0.96562 & 0.02132 & 0.00000 & 0.00000 & 0.79796\\
+slip & 0.00 & Learned risk & 0.99687 & 0.00612 & 0.00000 & 0.00000 & 0.85557\\
+slip & 0.00 & Learned EU & 0.99687 & 0.00612 & 0.00000 & 0.00000 & 0.85843\\
+slip & 0.00 & CVaR recovery & 0.99375 & 0.01225 & 0.00000 & 0.00313 & 0.84282\\
+slip & 0.00 & Recover-v5 & 0.99062 & 0.00936 & 0.00000 & 0.00000 & 0.84253\\
+slip & 0.00 & Oracle & 0.99687 & 0.00612 & 0.00000 & 0.00000 & 0.85996\\
+slip & 0.25 & Robust margin & 0.22187 & 0.05120 & 0.00313 & 0.01562 & -0.26276\\
+slip & 0.25 & Contingent & 0.97188 & 0.01429 & 0.00000 & 0.00000 & 0.80531\\
+slip & 0.25 & Learned risk & 0.99062 & 0.01307 & 0.00000 & 0.00000 & 0.84718\\
+slip & 0.25 & Learned EU & 0.98438 & 0.01021 & 0.00000 & 0.00000 & 0.84132\\
+slip & 0.25 & CVaR recovery & 0.98438 & 0.01370 & 0.00000 & 0.00313 & 0.83150\\
+slip & 0.25 & Recover-v5 & 0.98125 & 0.01354 & 0.00000 & 0.00000 & 0.83135\\
+slip & 0.25 & Oracle & 0.99375 & 0.00817 & 0.00000 & 0.00000 & 0.85647\\
+slip & 0.50 & Robust margin & 0.23750 & 0.04001 & 0.00625 & 0.02813 & -0.26134\\
+slip & 0.50 & Contingent & 0.94375 & 0.02381 & 0.00000 & 0.00625 & 0.75712\\
+slip & 0.50 & Learned risk & 0.99375 & 0.01225 & 0.00000 & 0.00000 & 0.85154\\
+slip & 0.50 & Learned EU & 0.99062 & 0.00936 & 0.00000 & 0.00000 & 0.84955\\
+slip & 0.50 & CVaR recovery & 0.96562 & 0.02319 & 0.00000 & 0.00000 & 0.80857\\
+slip & 0.50 & Recover-v5 & 0.95625 & 0.02916 & 0.00000 & 0.00000 & 0.79849\\
+slip & 0.50 & Oracle & 0.98750 & 0.01354 & 0.00000 & 0.00000 & 0.84867\\
+slip & 0.75 & Robust margin & 0.29375 & 0.05018 & 0.00000 & 0.01250 & -0.15570\\
+slip & 0.75 & Contingent & 0.93437 & 0.03222 & 0.00000 & 0.00625 & 0.74548\\
+slip & 0.75 & Learned risk & 0.98750 & 0.01354 & 0.00000 & 0.00313 & 0.83773\\
+slip & 0.75 & Learned EU & 0.99062 & 0.00936 & 0.00000 & 0.00000 & 0.84955\\
+slip & 0.75 & CVaR recovery & 0.93125 & 0.01780 & 0.00313 & 0.01562 & 0.73966\\
+slip & 0.75 & Recover-v5 & 0.95000 & 0.02769 & 0.00000 & 0.00937 & 0.78023\\
+slip & 0.75 & Oracle & 0.97813 & 0.02246 & 0.00000 & 0.00625 & 0.82958\\
+slip & 1.00 & Robust margin & 0.22500 & 0.03629 & 0.00000 & 0.03438 & -0.27849\\
+slip & 1.00 & Contingent & 0.90938 & 0.03090 & 0.00000 & 0.01562 & 0.70194\\
+slip & 1.00 & Learned risk & 0.98750 & 0.01000 & 0.00000 & 0.00313 & 0.83763\\
+slip & 1.00 & Learned EU & 0.98438 & 0.01370 & 0.00000 & 0.00313 & 0.83729\\
+slip & 1.00 & CVaR recovery & 0.94688 & 0.02747 & 0.00313 & 0.02187 & 0.75711\\
+slip & 1.00 & Recover-v5 & 0.92188 & 0.02623 & 0.00000 & 0.03125 & 0.71690\\
+slip & 1.00 & Oracle & 0.96875 & 0.02042 & 0.00000 & 0.01250 & 0.81005\\
+slip & 1.25 & Robust margin & 0.24688 & 0.03589 & 0.00625 & 0.03438 & -0.25639\\
+slip & 1.25 & Contingent & 0.88125 & 0.03136 & 0.00000 & 0.02187 & 0.65677\\
+slip & 1.25 & Learned risk & 0.98125 & 0.01354 & 0.00000 & 0.00937 & 0.82357\\
+slip & 1.25 & Learned EU & 0.95937 & 0.02246 & 0.00000 & 0.02187 & 0.78520\\
+slip & 1.25 & CVaR recovery & 0.91563 & 0.02246 & 0.00000 & 0.03438 & 0.70875\\
+slip & 1.25 & Recover-v5 & 0.94688 & 0.02246 & 0.00000 & 0.01875 & 0.76398\\
+slip & 1.25 & Oracle & 0.95625 & 0.02082 & 0.00000 & 0.02187 & 0.78442\\
+slip & 1.50 & Robust margin & 0.21875 & 0.05245 & 0.00313 & 0.04688 & -0.30588\\
+slip & 1.50 & Contingent & 0.88125 & 0.05229 & 0.00000 & 0.02813 & 0.64970\\
+slip & 1.50 & Learned risk & 0.97500 & 0.01225 & 0.00000 & 0.00625 & 0.81684\\
+slip & 1.50 & Learned EU & 0.96250 & 0.02709 & 0.00000 & 0.02500 & 0.79000\\
+slip & 1.50 & CVaR recovery & 0.92188 & 0.03681 & 0.00313 & 0.02500 & 0.71581\\
+slip & 1.50 & Recover-v5 & 0.88750 & 0.04762 & 0.00000 & 0.02813 & 0.67721\\
+slip & 1.50 & Oracle & 0.95312 & 0.01882 & 0.00000 & 0.02813 & 0.77411\\
+trap & 0.00 & Robust margin & 0.16875 & 0.04398 & 0.00000 & 0.01250 & -0.32788\\
+trap & 0.00 & Contingent & 0.93750 & 0.02416 & 0.00000 & 0.00313 & 0.75362\\
+trap & 0.00 & Learned risk & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.85931\\
+trap & 0.00 & Learned EU & 0.99062 & 0.00936 & 0.00000 & 0.00000 & 0.85046\\
+trap & 0.00 & CVaR recovery & 0.97813 & 0.01307 & 0.00000 & 0.00000 & 0.82490\\
+trap & 0.00 & Recover-v5 & 0.95625 & 0.02916 & 0.00000 & 0.00000 & 0.79479\\
+trap & 0.00 & Oracle & 0.98750 & 0.01354 & 0.00000 & 0.00313 & 0.84194\\
+trap & 0.25 & Robust margin & 0.15625 & 0.04184 & 0.00313 & 0.02187 & -0.36165\\
+trap & 0.25 & Contingent & 0.89062 & 0.04938 & 0.00000 & 0.00625 & 0.68737\\
+trap & 0.25 & Learned risk & 0.97188 & 0.01429 & 0.00000 & 0.00000 & 0.82058\\
+trap & 0.25 & Learned EU & 0.97500 & 0.01780 & 0.00000 & 0.00000 & 0.82891\\
+trap & 0.25 & CVaR recovery & 0.94688 & 0.03298 & 0.00000 & 0.00625 & 0.77472\\
+trap & 0.25 & Recover-v5 & 0.95312 & 0.02777 & 0.00000 & 0.00000 & 0.79088\\
+trap & 0.25 & Oracle & 0.98438 & 0.01021 & 0.00000 & 0.00000 & 0.84147\\
+trap & 0.50 & Robust margin & 0.16250 & 0.04164 & 0.00000 & 0.02187 & -0.34825\\
+trap & 0.50 & Contingent & 0.93750 & 0.01291 & 0.00000 & 0.00625 & 0.75117\\
+trap & 0.50 & Learned risk & 0.97188 & 0.01429 & 0.00000 & 0.00000 & 0.81920\\
+trap & 0.50 & Learned EU & 0.97188 & 0.02654 & 0.00000 & 0.00000 & 0.82180\\
+trap & 0.50 & CVaR recovery & 0.95937 & 0.01838 & 0.00000 & 0.00313 & 0.79366\\
+trap & 0.50 & Recover-v5 & 0.95000 & 0.02615 & 0.00313 & 0.00313 & 0.77743\\
+trap & 0.50 & Oracle & 0.97813 & 0.01307 & 0.00000 & 0.00313 & 0.83020\\
+trap & 0.75 & Robust margin & 0.17500 & 0.03317 & 0.00000 & 0.02187 & -0.33142\\
+trap & 0.75 & Contingent & 0.90938 & 0.02807 & 0.00000 & 0.00313 & 0.71516\\
+trap & 0.75 & Learned risk & 0.97813 & 0.01307 & 0.00000 & 0.00000 & 0.82814\\
+trap & 0.75 & Learned EU & 0.98438 & 0.01370 & 0.00000 & 0.00000 & 0.83860\\
+trap & 0.75 & CVaR recovery & 0.92188 & 0.02923 & 0.00000 & 0.00937 & 0.73505\\
+trap & 0.75 & Recover-v5 & 0.93125 & 0.02709 & 0.00000 & 0.00625 & 0.75192\\
+trap & 0.75 & Oracle & 0.99062 & 0.00936 & 0.00000 & 0.00313 & 0.84667\\
+trap & 1.00 & Robust margin & 0.17813 & 0.04287 & 0.00313 & 0.01562 & -0.32262\\
+trap & 1.00 & Contingent & 0.91250 & 0.02381 & 0.00000 & 0.00937 & 0.71480\\
+trap & 1.00 & Learned risk & 0.98125 & 0.01633 & 0.00000 & 0.00000 & 0.83203\\
+trap & 1.00 & Learned EU & 0.98125 & 0.01871 & 0.00000 & 0.00000 & 0.83522\\
+trap & 1.00 & CVaR recovery & 0.94063 & 0.03090 & 0.00000 & 0.00625 & 0.76320\\
+trap & 1.00 & Recover-v5 & 0.95000 & 0.02082 & 0.00000 & 0.00000 & 0.78533\\
+trap & 1.00 & Oracle & 0.98750 & 0.01000 & 0.00000 & 0.00313 & 0.84118\\
+trap & 1.25 & Robust margin & 0.14375 & 0.02082 & 0.00625 & 0.01875 & -0.38135\\
+trap & 1.25 & Contingent & 0.89375 & 0.04302 & 0.00000 & 0.00625 & 0.69130\\
+trap & 1.25 & Learned risk & 0.96250 & 0.01780 & 0.00000 & 0.00000 & 0.80764\\
+trap & 1.25 & Learned EU & 0.96875 & 0.01826 & 0.00000 & 0.00000 & 0.81849\\
+trap & 1.25 & CVaR recovery & 0.94063 & 0.03222 & 0.00000 & 0.00625 & 0.76432\\
+trap & 1.25 & Recover-v5 & 0.93437 & 0.02654 & 0.00000 & 0.00000 & 0.76523\\
+trap & 1.25 & Oracle & 0.97500 & 0.01225 & 0.00000 & 0.00625 & 0.82184\\
+trap & 1.50 & Robust margin & 0.15625 & 0.02237 & 0.00937 & 0.02187 & -0.37169\\
+trap & 1.50 & Contingent & 0.87187 & 0.04129 & 0.00000 & 0.00313 & 0.66112\\
+trap & 1.50 & Learned risk & 0.95625 & 0.02615 & 0.00313 & 0.00313 & 0.78773\\
+trap & 1.50 & Learned EU & 0.97813 & 0.01307 & 0.00000 & 0.00000 & 0.83261\\
+trap & 1.50 & CVaR recovery & 0.94688 & 0.02424 & 0.00000 & 0.00313 & 0.77609\\
+trap & 1.50 & Recover-v5 & 0.90625 & 0.03163 & 0.00000 & 0.00313 & 0.71909\\
+trap & 1.50 & Oracle & 0.97188 & 0.01696 & 0.00000 & 0.00000 & 0.82380\\
+sensor & 0.00 & Robust margin & 0.21875 & 0.02739 & 0.00313 & 0.00937 & -0.25914\\
+sensor & 0.00 & Contingent & 0.91250 & 0.02381 & 0.00000 & 0.00313 & 0.71842\\
+sensor & 0.00 & Learned risk & 0.99375 & 0.00817 & 0.00000 & 0.00313 & 0.84665\\
+sensor & 0.00 & Learned EU & 0.97813 & 0.01307 & 0.00000 & 0.00625 & 0.82586\\
+sensor & 0.00 & CVaR recovery & 0.95937 & 0.01595 & 0.00000 & 0.00625 & 0.79304\\
+sensor & 0.00 & Recover-v5 & 0.98125 & 0.01633 & 0.00000 & 0.00625 & 0.82226\\
+sensor & 0.00 & Oracle & 0.98750 & 0.01000 & 0.00000 & 0.00313 & 0.84389\\
+sensor & 0.25 & Robust margin & 0.22187 & 0.03349 & 0.00313 & 0.03125 & -0.28263\\
+sensor & 0.25 & Contingent & 0.90312 & 0.02492 & 0.00000 & 0.00313 & 0.70445\\
+sensor & 0.25 & Learned risk & 0.97188 & 0.01099 & 0.00000 & 0.00313 & 0.81672\\
+sensor & 0.25 & Learned EU & 0.96875 & 0.01826 & 0.00000 & 0.01250 & 0.80686\\
+sensor & 0.25 & CVaR recovery & 0.95937 & 0.01838 & 0.00000 & 0.00313 & 0.79821\\
+sensor & 0.25 & Recover-v5 & 0.95625 & 0.02082 & 0.00000 & 0.00313 & 0.79302\\
+sensor & 0.25 & Oracle & 0.97813 & 0.01838 & 0.00000 & 0.00313 & 0.83163\\
+sensor & 0.50 & Robust margin & 0.25312 & 0.05513 & 0.00313 & 0.01875 & -0.22212\\
+sensor & 0.50 & Contingent & 0.94688 & 0.01837 & 0.00000 & 0.00313 & 0.76891\\
+sensor & 0.50 & Learned risk & 0.97813 & 0.01307 & 0.00000 & 0.00000 & 0.82871\\
+sensor & 0.50 & Learned EU & 0.97813 & 0.02424 & 0.00000 & 0.00937 & 0.82276\\
+sensor & 0.50 & CVaR recovery & 0.95312 & 0.02283 & 0.00000 & 0.01250 & 0.77650\\
+sensor & 0.50 & Recover-v5 & 0.96562 & 0.02319 & 0.00000 & 0.01250 & 0.79290\\
+sensor & 0.50 & Oracle & 0.99062 & 0.00936 & 0.00000 & 0.00313 & 0.84843\\
+sensor & 0.75 & Robust margin & 0.17188 & 0.04307 & 0.00313 & 0.02187 & -0.34029\\
+sensor & 0.75 & Contingent & 0.90625 & 0.02739 & 0.00000 & 0.01250 & 0.70148\\
+sensor & 0.75 & Learned risk & 0.97500 & 0.02199 & 0.00000 & 0.00313 & 0.82043\\
+sensor & 0.75 & Learned EU & 0.97500 & 0.01528 & 0.00000 & 0.00625 & 0.81997\\
+sensor & 0.75 & CVaR recovery & 0.97188 & 0.01429 & 0.00000 & 0.00625 & 0.80876\\
+sensor & 0.75 & Recover-v5 & 0.94688 & 0.01595 & 0.00000 & 0.00625 & 0.77604\\
+sensor & 0.75 & Oracle & 0.98438 & 0.01370 & 0.00000 & 0.00625 & 0.83530\\
+sensor & 1.00 & Robust margin & 0.15000 & 0.05463 & 0.00313 & 0.02813 & -0.37938\\
+sensor & 1.00 & Contingent & 0.91875 & 0.02274 & 0.00000 & 0.00313 & 0.73207\\
+sensor & 1.00 & Learned risk & 0.97500 & 0.01780 & 0.00000 & 0.00000 & 0.82400\\
+sensor & 1.00 & Learned EU & 0.98750 & 0.01633 & 0.00000 & 0.00625 & 0.83758\\
+sensor & 1.00 & CVaR recovery & 0.94375 & 0.01780 & 0.00000 & 0.00313 & 0.77165\\
+sensor & 1.00 & Recover-v5 & 0.96562 & 0.01429 & 0.00000 & 0.00313 & 0.80441\\
+sensor & 1.00 & Oracle & 0.98750 & 0.01000 & 0.00000 & 0.00313 & 0.84395\\
+sensor & 1.25 & Robust margin & 0.26250 & 0.05340 & 0.00313 & 0.01875 & -0.20872\\
+sensor & 1.25 & Contingent & 0.90938 & 0.03090 & 0.00000 & 0.00313 & 0.71975\\
+sensor & 1.25 & Learned risk & 0.98125 & 0.01354 & 0.00000 & 0.00000 & 0.83339\\
+sensor & 1.25 & Learned EU & 0.98125 & 0.01633 & 0.00000 & 0.00625 & 0.83096\\
+sensor & 1.25 & CVaR recovery & 0.91875 & 0.01354 & 0.00000 & 0.00625 & 0.73433\\
+sensor & 1.25 & Recover-v5 & 0.93750 & 0.03028 & 0.00313 & 0.01562 & 0.74588\\
+sensor & 1.25 & Oracle & 0.97813 & 0.01307 & 0.00000 & 0.00313 & 0.83240\\
+sensor & 1.50 & Robust margin & 0.22500 & 0.05229 & 0.00313 & 0.02813 & -0.27301\\
+sensor & 1.50 & Contingent & 0.92812 & 0.02895 & 0.00000 & 0.00313 & 0.74329\\
+sensor & 1.50 & Learned risk & 0.98438 & 0.01370 & 0.00000 & 0.00000 & 0.83755\\
+sensor & 1.50 & Learned EU & 0.97188 & 0.01696 & 0.00000 & 0.00625 & 0.81851\\
+sensor & 1.50 & CVaR recovery & 0.92500 & 0.03056 & 0.00000 & 0.00313 & 0.74723\\
+sensor & 1.50 & Recover-v5 & 0.91250 & 0.01780 & 0.00000 & 0.01875 & 0.71438\\
+sensor & 1.50 & Oracle & 0.98750 & 0.01000 & 0.00000 & 0.00313 & 0.84431\\
+budget & 0.00 & Robust margin & 0.44375 & 0.04164 & 0.00313 & 0.02500 & 0.02453\\
+budget & 0.00 & Contingent & 0.94375 & 0.03513 & 0.00000 & 0.00313 & 0.76745\\
+budget & 0.00 & Learned risk & 0.98438 & 0.01370 & 0.00000 & 0.00000 & 0.83922\\
+budget & 0.00 & Learned EU & 0.98750 & 0.01354 & 0.00000 & 0.00313 & 0.83921\\
+budget & 0.00 & CVaR recovery & 0.96250 & 0.02381 & 0.00000 & 0.00625 & 0.79673\\
+budget & 0.00 & Recover-v5 & 0.95312 & 0.02458 & 0.00000 & 0.01250 & 0.77783\\
+budget & 0.00 & Oracle & 0.98125 & 0.01633 & 0.00000 & 0.00625 & 0.83456\\
+budget & 0.25 & Robust margin & 0.23750 & 0.06001 & 0.00000 & 0.01562 & -0.23724\\
+budget & 0.25 & Contingent & 0.92812 & 0.02591 & 0.00000 & 0.00313 & 0.74140\\
+budget & 0.25 & Learned risk & 0.95312 & 0.02458 & 0.00000 & 0.00000 & 0.79852\\
+budget & 0.25 & Learned EU & 0.97813 & 0.02052 & 0.00000 & 0.00625 & 0.82394\\
+budget & 0.25 & CVaR recovery & 0.95625 & 0.02082 & 0.00313 & 0.00313 & 0.78599\\
+budget & 0.25 & Recover-v5 & 0.95937 & 0.02747 & 0.00000 & 0.00313 & 0.79358\\
+budget & 0.25 & Oracle & 0.97813 & 0.01595 & 0.00000 & 0.00313 & 0.83079\\
+budget & 0.50 & Robust margin & 0.17500 & 0.03895 & 0.00000 & 0.01250 & -0.31698\\
+budget & 0.50 & Contingent & 0.84375 & 0.04744 & 0.00000 & 0.00313 & 0.62776\\
+budget & 0.50 & Learned risk & 0.92500 & 0.02274 & 0.00000 & 0.00313 & 0.75428\\
+budget & 0.50 & Learned EU & 0.93750 & 0.02042 & 0.00000 & 0.00313 & 0.77206\\
+budget & 0.50 & CVaR recovery & 0.90625 & 0.03536 & 0.00000 & 0.00313 & 0.72186\\
+budget & 0.50 & Recover-v5 & 0.89375 & 0.03895 & 0.00313 & 0.00937 & 0.69463\\
+budget & 0.50 & Oracle & 0.92500 & 0.02916 & 0.00000 & 0.00625 & 0.75233\\
+budget & 0.75 & Robust margin & 0.14688 & 0.02747 & 0.00000 & 0.02500 & -0.37322\\
+budget & 0.75 & Contingent & 0.56875 & 0.03742 & 0.00313 & 0.00625 & 0.24703\\
+budget & 0.75 & Learned risk & 0.88125 & 0.04547 & 0.00000 & 0.00313 & 0.69462\\
+budget & 0.75 & Learned EU & 0.88438 & 0.03879 & 0.00000 & 0.00313 & 0.69827\\
+budget & 0.75 & CVaR recovery & 0.85938 & 0.03901 & 0.00313 & 0.01875 & 0.63696\\
+budget & 0.75 & Recover-v5 & 0.88438 & 0.02895 & 0.00000 & 0.00313 & 0.69453\\
+budget & 0.75 & Oracle & 0.91875 & 0.02274 & 0.00000 & 0.00625 & 0.74321\\
+budget & 1.00 & Robust margin & 0.12812 & 0.03703 & 0.00000 & 0.02813 & -0.40306\\
+budget & 1.00 & Contingent & 0.39062 & 0.04678 & 0.00000 & 0.00625 & 0.01006\\
+budget & 1.00 & Learned risk & 0.78125 & 0.04744 & 0.00000 & 0.00625 & 0.55266\\
+budget & 1.00 & Learned EU & 0.83437 & 0.05558 & 0.00000 & 0.00625 & 0.62677\\
+budget & 1.00 & CVaR recovery & 0.79375 & 0.05181 & 0.00000 & 0.00625 & 0.56933\\
+budget & 1.00 & Recover-v5 & 0.79375 & 0.05261 & 0.00000 & 0.01250 & 0.56153\\
+budget & 1.00 & Oracle & 0.91250 & 0.01780 & 0.00000 & 0.00625 & 0.73523\\
+budget & 1.25 & Robust margin & 0.14375 & 0.03560 & 0.00000 & 0.01875 & -0.36835\\
+budget & 1.25 & Contingent & 0.20312 & 0.04006 & 0.00000 & 0.00313 & -0.24046\\
+budget & 1.25 & Learned risk & 0.60938 & 0.05935 & 0.00000 & 0.00000 & 0.32860\\
+budget & 1.25 & Learned EU & 0.66563 & 0.06060 & 0.00000 & 0.00625 & 0.39778\\
+budget & 1.25 & CVaR recovery & 0.58750 & 0.06697 & 0.00000 & 0.00937 & 0.28676\\
+budget & 1.25 & Recover-v5 & 0.63750 & 0.06966 & 0.00000 & 0.00937 & 0.35561\\
+budget & 1.25 & Oracle & 0.78438 & 0.05038 & 0.00000 & 0.00625 & 0.56168\\
+budget & 1.50 & Robust margin & 0.11250 & 0.04204 & 0.00000 & 0.03438 & -0.42900\\
+budget & 1.50 & Contingent & 0.09688 & 0.02952 & 0.00000 & 0.00313 & -0.38165\\
+budget & 1.50 & Learned risk & 0.30625 & 0.05973 & 0.00000 & 0.00625 & -0.08737\\
+budget & 1.50 & Learned EU & 0.31250 & 0.06833 & 0.00000 & 0.00625 & -0.07757\\
+budget & 1.50 & CVaR recovery & 0.26875 & 0.05789 & 0.00000 & 0.01250 & -0.14565\\
+budget & 1.50 & Recover-v5 & 0.25938 & 0.05328 & 0.00000 & 0.02187 & -0.17015\\
+budget & 1.50 & Oracle & 0.35625 & 0.05861 & 0.00000 & 0.00313 & -0.01229\\
+combined & 0.00 & Robust margin & 0.68750 & 0.05846 & 0.00000 & 0.00625 & 0.38623\\
+combined & 0.00 & Contingent & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.84214\\
+combined & 0.00 & Learned risk & 0.99687 & 0.00612 & 0.00000 & 0.00313 & 0.85456\\
+combined & 0.00 & Learned EU & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.86344\\
+combined & 0.00 & CVaR recovery & 0.99687 & 0.00612 & 0.00000 & 0.00313 & 0.84911\\
+combined & 0.00 & Recover-v5 & 1.00000 & 0.00000 & 0.00000 & 0.00000 & 0.85856\\
+combined & 0.00 & Oracle & 0.99687 & 0.00612 & 0.00000 & 0.00000 & 0.86165\\
+combined & 0.25 & Robust margin & 0.40937 & 0.07273 & 0.00000 & 0.02187 & -0.01608\\
+combined & 0.25 & Contingent & 0.95625 & 0.02274 & 0.00000 & 0.00313 & 0.78283\\
+combined & 0.25 & Learned risk & 0.98750 & 0.01354 & 0.00000 & 0.00313 & 0.84325\\
+combined & 0.25 & Learned EU & 0.98750 & 0.01000 & 0.00000 & 0.00000 & 0.84932\\
+combined & 0.25 & CVaR recovery & 0.98438 & 0.02092 & 0.00000 & 0.00000 & 0.83334\\
+combined & 0.25 & Recover-v5 & 0.98750 & 0.01354 & 0.00000 & 0.00000 & 0.83989\\
+combined & 0.25 & Oracle & 0.99062 & 0.00936 & 0.00000 & 0.00313 & 0.84978\\
+combined & 0.50 & Robust margin & 0.19062 & 0.06290 & 0.00625 & 0.03125 & -0.33485\\
+combined & 0.50 & Contingent & 0.89062 & 0.02092 & 0.00000 & 0.01250 & 0.67875\\
+combined & 0.50 & Learned risk & 0.94688 & 0.02424 & 0.00000 & 0.00937 & 0.77981\\
+combined & 0.50 & Learned EU & 0.95937 & 0.02052 & 0.00000 & 0.00625 & 0.80205\\
+combined & 0.50 & CVaR recovery & 0.95000 & 0.02082 & 0.00000 & 0.00313 & 0.77880\\
+combined & 0.50 & Recover-v5 & 0.93125 & 0.02000 & 0.00313 & 0.00625 & 0.75033\\
+combined & 0.50 & Oracle & 0.96562 & 0.02132 & 0.00000 & 0.00937 & 0.80627\\
+combined & 0.75 & Robust margin & 0.12187 & 0.03471 & 0.00625 & 0.05312 & -0.46050\\
+combined & 0.75 & Contingent & 0.78438 & 0.03589 & 0.00000 & 0.02187 & 0.52107\\
+combined & 0.75 & Learned risk & 0.83437 & 0.03985 & 0.00000 & 0.02500 & 0.60058\\
+combined & 0.75 & Learned EU & 0.86875 & 0.04454 & 0.00000 & 0.00937 & 0.66589\\
+combined & 0.75 & CVaR recovery & 0.81563 & 0.04784 & 0.00000 & 0.01875 & 0.57360\\
+combined & 0.75 & Recover-v5 & 0.78438 & 0.03589 & 0.00000 & 0.00937 & 0.54397\\
+combined & 0.75 & Oracle & 0.88750 & 0.04001 & 0.00000 & 0.01250 & 0.69522\\
+combined & 1.00 & Robust margin & 0.12500 & 0.04083 & 0.02813 & 0.06250 & -0.50444\\
+combined & 1.00 & Contingent & 0.68750 & 0.04565 & 0.00000 & 0.02187 & 0.38334\\
+combined & 1.00 & Learned risk & 0.73750 & 0.05018 & 0.00000 & 0.03125 & 0.45138\\
+combined & 1.00 & Learned EU & 0.78125 & 0.05084 & 0.00000 & 0.00937 & 0.54207\\
+combined & 1.00 & CVaR recovery & 0.76875 & 0.04204 & 0.00000 & 0.01250 & 0.51457\\
+combined & 1.00 & Recover-v5 & 0.71562 & 0.04229 & 0.00000 & 0.03125 & 0.41746\\
+combined & 1.00 & Oracle & 0.78125 & 0.03163 & 0.00000 & 0.01562 & 0.53586\\
+combined & 1.25 & Robust margin & 0.12812 & 0.04229 & 0.02500 & 0.06563 & -0.50471\\
+combined & 1.25 & Contingent & 0.47813 & 0.05558 & 0.00000 & 0.05000 & 0.05904\\
+combined & 1.25 & Learned risk & 0.63438 & 0.06263 & 0.00000 & 0.03438 & 0.30335\\
+combined & 1.25 & Learned EU & 0.66563 & 0.03879 & 0.00000 & 0.03125 & 0.35230\\
+combined & 1.25 & CVaR recovery & 0.62500 & 0.05628 & 0.00313 & 0.04688 & 0.26775\\
+combined & 1.25 & Recover-v5 & 0.66250 & 0.04814 & 0.00313 & 0.02813 & 0.34359\\
+combined & 1.25 & Oracle & 0.74375 & 0.05687 & 0.00000 & 0.02500 & 0.46962\\
+combined & 1.50 & Robust margin & 0.09688 & 0.03222 & 0.05625 & 0.13125 & -0.67746\\
+combined & 1.50 & Contingent & 0.29688 & 0.03196 & 0.00000 & 0.05937 & -0.20394\\
+combined & 1.50 & Learned risk & 0.50625 & 0.06246 & 0.00313 & 0.05312 & 0.09506\\
+combined & 1.50 & Learned EU & 0.58750 & 0.05973 & 0.00000 & 0.03750 & 0.23198\\
+combined & 1.50 & CVaR recovery & 0.44688 & 0.03658 & 0.01250 & 0.03125 & 0.02236\\
+combined & 1.50 & Recover-v5 & 0.51562 & 0.05864 & 0.00625 & 0.03750 & 0.12029\\
+combined & 1.50 & Oracle & 0.62500 & 0.06584 & 0.00000 & 0.04688 & 0.27470\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\section{Ablation Seed-Level Metrics}
+
+The ablation gate fails at the aggregate level, but seed-level rows are retained so that the failure cannot be dismissed as a table-generation artifact. These rows are generated directly from \texttt{ablation\_seed\_metrics.csv}.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.16\linewidth}p{0.26\linewidth}cccccc}
+\caption{Seed-level ablation metrics.}\label{tab:ablation-seeds}\\
+\toprule
+Split & Ablation & Seed & Episodes & Success & Irrev. & Damage & Safety utility\\
+\midrule
+\endfirsthead
+\caption[]{Seed-level ablation metrics. (continued)}\\
+\toprule
+Split & Ablation & Seed & Episodes & Success & Irrev. & Damage & Safety utility\\
+\midrule
+\endhead
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 0 & 80 & 0.72500 & 0.00000 & 0.01250 & 0.45859\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 1 & 80 & 0.72500 & 0.00000 & 0.00000 & 0.47130\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 2 & 80 & 0.72500 & 0.00000 & 0.00000 & 0.47206\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 3 & 80 & 0.66250 & 0.00000 & 0.06250 & 0.30877\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 4 & 80 & 0.71250 & 0.00000 & 0.02500 & 0.42336\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 5 & 80 & 0.73750 & 0.00000 & 0.01250 & 0.47554\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 6 & 80 & 0.76250 & 0.00000 & 0.02500 & 0.49549\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 7 & 80 & 0.81250 & 0.00000 & 0.01250 & 0.58332\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 8 & 80 & 0.68750 & 0.00000 & 0.03750 & 0.37322\\
+adversarial\_compound\_shift & full\_recoverability\_score\_v5 & 9 & 80 & 0.72500 & 0.00000 & 0.02500 & 0.44390\\
+adversarial\_compound\_shift & minus\_recovery\_success & 0 & 80 & 0.80000 & 0.00000 & 0.01250 & 0.56311\\
+adversarial\_compound\_shift & minus\_recovery\_success & 1 & 80 & 0.67500 & 0.00000 & 0.00000 & 0.40309\\
+adversarial\_compound\_shift & minus\_recovery\_success & 2 & 80 & 0.73750 & 0.00000 & 0.05000 & 0.42985\\
+adversarial\_compound\_shift & minus\_recovery\_success & 3 & 80 & 0.71250 & 0.01250 & 0.01250 & 0.42435\\
+adversarial\_compound\_shift & minus\_recovery\_success & 4 & 80 & 0.67500 & 0.02500 & 0.02500 & 0.34014\\
+adversarial\_compound\_shift & minus\_recovery\_success & 5 & 80 & 0.65000 & 0.00000 & 0.00000 & 0.36515\\
+adversarial\_compound\_shift & minus\_recovery\_success & 6 & 80 & 0.80000 & 0.01250 & 0.01250 & 0.54096\\
+adversarial\_compound\_shift & minus\_recovery\_success & 7 & 80 & 0.73750 & 0.00000 & 0.00000 & 0.48876\\
+adversarial\_compound\_shift & minus\_recovery\_success & 8 & 80 & 0.65000 & 0.00000 & 0.02500 & 0.33625\\
+adversarial\_compound\_shift & minus\_recovery\_success & 9 & 80 & 0.71250 & 0.00000 & 0.01250 & 0.44083\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 0 & 80 & 0.81250 & 0.00000 & 0.05000 & 0.53557\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 1 & 80 & 0.62500 & 0.00000 & 0.02500 & 0.29995\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 2 & 80 & 0.76250 & 0.00000 & 0.02500 & 0.49423\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 3 & 80 & 0.70000 & 0.00000 & 0.02500 & 0.40997\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 4 & 80 & 0.68750 & 0.00000 & 0.02500 & 0.38875\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 5 & 80 & 0.70000 & 0.00000 & 0.02500 & 0.40841\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 6 & 80 & 0.73750 & 0.00000 & 0.03750 & 0.44486\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 7 & 80 & 0.66250 & 0.00000 & 0.05000 & 0.32458\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 8 & 80 & 0.76250 & 0.01250 & 0.02500 & 0.47719\\
+adversarial\_compound\_shift & minus\_recovery\_cost & 9 & 80 & 0.72500 & 0.00000 & 0.01250 & 0.45837\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 0 & 80 & 0.81250 & 0.00000 & 0.02500 & 0.56745\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 1 & 80 & 0.71250 & 0.00000 & 0.00000 & 0.45488\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 2 & 80 & 0.75000 & 0.00000 & 0.01250 & 0.49204\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 3 & 80 & 0.72500 & 0.00000 & 0.03750 & 0.42625\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 4 & 80 & 0.81250 & 0.00000 & 0.02500 & 0.56438\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 5 & 80 & 0.67500 & 0.00000 & 0.01250 & 0.38715\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 6 & 80 & 0.66250 & 0.00000 & 0.03750 & 0.33953\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 7 & 80 & 0.78750 & 0.00000 & 0.01250 & 0.54316\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 8 & 80 & 0.68750 & 0.00000 & 0.00000 & 0.41981\\
+adversarial\_compound\_shift & minus\_irreversible\_trap\_penalty & 9 & 80 & 0.71250 & 0.00000 & 0.00000 & 0.45600\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 0 & 80 & 0.82500 & 0.00000 & 0.01250 & 0.59982\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 1 & 80 & 0.72500 & 0.00000 & 0.01250 & 0.45771\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 2 & 80 & 0.71250 & 0.00000 & 0.01250 & 0.44176\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 3 & 80 & 0.75000 & 0.01250 & 0.02500 & 0.46014\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 4 & 80 & 0.77500 & 0.00000 & 0.01250 & 0.52736\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 5 & 80 & 0.80000 & 0.00000 & 0.02500 & 0.54774\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 6 & 80 & 0.71250 & 0.00000 & 0.01250 & 0.44154\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 7 & 80 & 0.82500 & 0.00000 & 0.00000 & 0.61218\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 8 & 80 & 0.73750 & 0.00000 & 0.00000 & 0.48978\\
+adversarial\_compound\_shift & minus\_damage\_penalty & 9 & 80 & 0.72500 & 0.00000 & 0.03750 & 0.42672\\
+adversarial\_compound\_shift & minus\_budget\_slack & 0 & 80 & 0.70000 & 0.00000 & 0.02500 & 0.41065\\
+adversarial\_compound\_shift & minus\_budget\_slack & 1 & 80 & 0.72500 & 0.00000 & 0.02500 & 0.44084\\
+adversarial\_compound\_shift & minus\_budget\_slack & 2 & 80 & 0.66250 & 0.00000 & 0.01250 & 0.37157\\
+adversarial\_compound\_shift & minus\_budget\_slack & 3 & 80 & 0.58750 & 0.00000 & 0.02500 & 0.24971\\
+adversarial\_compound\_shift & minus\_budget\_slack & 4 & 80 & 0.65000 & 0.01250 & 0.01250 & 0.33718\\
+adversarial\_compound\_shift & minus\_budget\_slack & 5 & 80 & 0.76250 & 0.00000 & 0.02500 & 0.49536\\
+adversarial\_compound\_shift & minus\_budget\_slack & 6 & 80 & 0.66250 & 0.00000 & 0.01250 & 0.37152\\
+adversarial\_compound\_shift & minus\_budget\_slack & 7 & 80 & 0.73750 & 0.00000 & 0.02500 & 0.45946\\
+adversarial\_compound\_shift & minus\_budget\_slack & 8 & 80 & 0.71250 & 0.00000 & 0.02500 & 0.42337\\
+adversarial\_compound\_shift & minus\_budget\_slack & 9 & 80 & 0.65000 & 0.00000 & 0.01250 & 0.35508\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 0 & 80 & 0.72500 & 0.00000 & 0.00000 & 0.47397\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 1 & 80 & 0.75000 & 0.00000 & 0.00000 & 0.50593\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 2 & 80 & 0.82500 & 0.00000 & 0.00000 & 0.61359\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 3 & 80 & 0.70000 & 0.00000 & 0.03750 & 0.39249\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 4 & 80 & 0.73750 & 0.00000 & 0.00000 & 0.49098\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 5 & 80 & 0.77500 & 0.00000 & 0.01250 & 0.52738\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 6 & 80 & 0.78750 & 0.00000 & 0.01250 & 0.54563\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 7 & 80 & 0.72500 & 0.00000 & 0.00000 & 0.47151\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 8 & 80 & 0.68750 & 0.00000 & 0.01250 & 0.40359\\
+adversarial\_compound\_shift & minus\_branch\_entropy & 9 & 80 & 0.65000 & 0.00000 & 0.02500 & 0.33719\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 0 & 80 & 0.75000 & 0.00000 & 0.00000 & 0.50875\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 1 & 80 & 0.72500 & 0.00000 & 0.02500 & 0.44183\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 2 & 80 & 0.68750 & 0.00000 & 0.01250 & 0.40580\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 3 & 80 & 0.77500 & 0.00000 & 0.01250 & 0.52964\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 4 & 80 & 0.70000 & 0.00000 & 0.02500 & 0.40711\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 5 & 80 & 0.75000 & 0.00000 & 0.02500 & 0.47898\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 6 & 80 & 0.75000 & 0.00000 & 0.02500 & 0.47863\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 7 & 80 & 0.76250 & 0.00000 & 0.02500 & 0.49419\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 8 & 80 & 0.66250 & 0.00000 & 0.03750 & 0.34000\\
+adversarial\_compound\_shift & minus\_calibration\_penalty & 9 & 80 & 0.75000 & 0.00000 & 0.00000 & 0.50804\\
+adversarial\_compound\_shift & risk\_only\_score & 0 & 80 & 0.58750 & 0.00000 & 0.01250 & 0.26558\\
+adversarial\_compound\_shift & risk\_only\_score & 1 & 80 & 0.48750 & 0.00000 & 0.03750 & 0.09104\\
+adversarial\_compound\_shift & risk\_only\_score & 2 & 80 & 0.57500 & 0.01250 & 0.05000 & 0.18519\\
+adversarial\_compound\_shift & risk\_only\_score & 3 & 80 & 0.50000 & 0.01250 & 0.05000 & 0.07711\\
+adversarial\_compound\_shift & risk\_only\_score & 4 & 80 & 0.52500 & 0.00000 & 0.02500 & 0.16332\\
+adversarial\_compound\_shift & risk\_only\_score & 5 & 80 & 0.55000 & 0.00000 & 0.02500 & 0.19620\\
+adversarial\_compound\_shift & risk\_only\_score & 6 & 80 & 0.55000 & 0.01250 & 0.01250 & 0.19216\\
+adversarial\_compound\_shift & risk\_only\_score & 7 & 80 & 0.57500 & 0.00000 & 0.03750 & 0.21569\\
+adversarial\_compound\_shift & risk\_only\_score & 8 & 80 & 0.62500 & 0.00000 & 0.00000 & 0.33259\\
+adversarial\_compound\_shift & risk\_only\_score & 9 & 80 & 0.52500 & 0.00000 & 0.01250 & 0.17632\\
+adversarial\_compound\_shift & expected\_utility\_only & 0 & 80 & 0.78750 & 0.00000 & 0.01250 & 0.54835\\
+adversarial\_compound\_shift & expected\_utility\_only & 1 & 80 & 0.73750 & 0.00000 & 0.00000 & 0.48927\\
+adversarial\_compound\_shift & expected\_utility\_only & 2 & 80 & 0.77500 & 0.01250 & 0.03750 & 0.48149\\
+adversarial\_compound\_shift & expected\_utility\_only & 3 & 80 & 0.76250 & 0.00000 & 0.02500 & 0.49450\\
+adversarial\_compound\_shift & expected\_utility\_only & 4 & 80 & 0.73750 & 0.01250 & 0.05000 & 0.41338\\
+adversarial\_compound\_shift & expected\_utility\_only & 5 & 80 & 0.77500 & 0.00000 & 0.01250 & 0.52795\\
+adversarial\_compound\_shift & expected\_utility\_only & 6 & 80 & 0.78750 & 0.00000 & 0.01250 & 0.54577\\
+adversarial\_compound\_shift & expected\_utility\_only & 7 & 80 & 0.76250 & 0.00000 & 0.01250 & 0.50846\\
+adversarial\_compound\_shift & expected\_utility\_only & 8 & 80 & 0.70000 & 0.00000 & 0.01250 & 0.42075\\
+adversarial\_compound\_shift & expected\_utility\_only & 9 & 80 & 0.81250 & 0.00000 & 0.00000 & 0.59599\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 0 & 80 & 0.83750 & 0.00000 & 0.00000 & 0.62893\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 1 & 80 & 0.86250 & 0.00000 & 0.00000 & 0.66290\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 2 & 80 & 0.88750 & 0.00000 & 0.02500 & 0.66746\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 3 & 80 & 0.86250 & 0.00000 & 0.02500 & 0.63223\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 4 & 80 & 0.83750 & 0.00000 & 0.00000 & 0.62884\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 5 & 80 & 0.83750 & 0.00000 & 0.00000 & 0.62880\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 6 & 80 & 0.77500 & 0.00000 & 0.00000 & 0.53842\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 7 & 80 & 0.81250 & 0.00000 & 0.00000 & 0.59205\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 8 & 80 & 0.83750 & 0.00000 & 0.01250 & 0.61421\\
+combined\_hard\_shift & full\_recoverability\_score\_v5 & 9 & 80 & 0.81250 & 0.01250 & 0.03750 & 0.53375\\
+combined\_hard\_shift & minus\_recovery\_success & 0 & 80 & 0.87500 & 0.00000 & 0.01250 & 0.66949\\
+combined\_hard\_shift & minus\_recovery\_success & 1 & 80 & 0.80000 & 0.00000 & 0.02500 & 0.54953\\
+combined\_hard\_shift & minus\_recovery\_success & 2 & 80 & 0.77500 & 0.00000 & 0.02500 & 0.50987\\
+combined\_hard\_shift & minus\_recovery\_success & 3 & 80 & 0.81250 & 0.00000 & 0.03750 & 0.54720\\
+combined\_hard\_shift & minus\_recovery\_success & 4 & 80 & 0.85000 & 0.00000 & 0.00000 & 0.64548\\
+combined\_hard\_shift & minus\_recovery\_success & 5 & 80 & 0.75000 & 0.01250 & 0.05000 & 0.43491\\
+combined\_hard\_shift & minus\_recovery\_success & 6 & 80 & 0.81250 & 0.00000 & 0.01250 & 0.57568\\
+combined\_hard\_shift & minus\_recovery\_success & 7 & 80 & 0.82500 & 0.00000 & 0.01250 & 0.59492\\
+combined\_hard\_shift & minus\_recovery\_success & 8 & 80 & 0.85000 & 0.00000 & 0.02500 & 0.61552\\
+combined\_hard\_shift & minus\_recovery\_success & 9 & 80 & 0.88750 & 0.00000 & 0.00000 & 0.69701\\
+combined\_hard\_shift & minus\_recovery\_cost & 0 & 80 & 0.85000 & 0.00000 & 0.01250 & 0.63109\\
+combined\_hard\_shift & minus\_recovery\_cost & 1 & 80 & 0.85000 & 0.00000 & 0.03750 & 0.59857\\
+combined\_hard\_shift & minus\_recovery\_cost & 2 & 80 & 0.78750 & 0.00000 & 0.05000 & 0.49662\\
+combined\_hard\_shift & minus\_recovery\_cost & 3 & 80 & 0.88750 & 0.00000 & 0.02500 & 0.66723\\
+combined\_hard\_shift & minus\_recovery\_cost & 4 & 80 & 0.87500 & 0.00000 & 0.01250 & 0.66452\\
+combined\_hard\_shift & minus\_recovery\_cost & 5 & 80 & 0.85000 & 0.00000 & 0.01250 & 0.63098\\
+combined\_hard\_shift & minus\_recovery\_cost & 6 & 80 & 0.82500 & 0.00000 & 0.00000 & 0.60897\\
+combined\_hard\_shift & minus\_recovery\_cost & 7 & 80 & 0.87500 & 0.00000 & 0.00000 & 0.67931\\
+combined\_hard\_shift & minus\_recovery\_cost & 8 & 80 & 0.86250 & 0.00000 & 0.03750 & 0.62441\\
+combined\_hard\_shift & minus\_recovery\_cost & 9 & 80 & 0.81250 & 0.00000 & 0.06250 & 0.51584\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 0 & 80 & 0.83750 & 0.00000 & 0.01250 & 0.61500\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 1 & 80 & 0.87500 & 0.00000 & 0.01250 & 0.66830\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 2 & 80 & 0.85000 & 0.00000 & 0.02500 & 0.61667\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 3 & 80 & 0.86250 & 0.00000 & 0.01250 & 0.65229\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 4 & 80 & 0.80000 & 0.00000 & 0.01250 & 0.56209\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 5 & 80 & 0.73750 & 0.00000 & 0.00000 & 0.49019\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 6 & 80 & 0.82500 & 0.00000 & 0.01250 & 0.59510\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 7 & 80 & 0.86250 & 0.00000 & 0.00000 & 0.66229\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 8 & 80 & 0.82500 & 0.00000 & 0.00000 & 0.61211\\
+combined\_hard\_shift & minus\_irreversible\_trap\_penalty & 9 & 80 & 0.83750 & 0.00000 & 0.00000 & 0.62705\\
+combined\_hard\_shift & minus\_damage\_penalty & 0 & 80 & 0.88750 & 0.00000 & 0.01250 & 0.68835\\
+combined\_hard\_shift & minus\_damage\_penalty & 1 & 80 & 0.85000 & 0.00000 & 0.00000 & 0.64478\\
+combined\_hard\_shift & minus\_damage\_penalty & 2 & 80 & 0.77500 & 0.00000 & 0.01250 & 0.52720\\
+combined\_hard\_shift & minus\_damage\_penalty & 3 & 80 & 0.81250 & 0.00000 & 0.02500 & 0.56351\\
+combined\_hard\_shift & minus\_damage\_penalty & 4 & 80 & 0.81250 & 0.00000 & 0.00000 & 0.59534\\
+combined\_hard\_shift & minus\_damage\_penalty & 5 & 80 & 0.86250 & 0.00000 & 0.02500 & 0.63457\\
+combined\_hard\_shift & minus\_damage\_penalty & 6 & 80 & 0.81250 & 0.00000 & 0.01250 & 0.57505\\
+combined\_hard\_shift & minus\_damage\_penalty & 7 & 80 & 0.88750 & 0.00000 & 0.02500 & 0.66720\\
+combined\_hard\_shift & minus\_damage\_penalty & 8 & 80 & 0.88750 & 0.00000 & 0.03750 & 0.65298\\
+combined\_hard\_shift & minus\_damage\_penalty & 9 & 80 & 0.85000 & 0.00000 & 0.02500 & 0.61570\\
+combined\_hard\_shift & minus\_budget\_slack & 0 & 80 & 0.83750 & 0.00000 & 0.01250 & 0.61297\\
+combined\_hard\_shift & minus\_budget\_slack & 1 & 80 & 0.80000 & 0.00000 & 0.00000 & 0.57467\\
+combined\_hard\_shift & minus\_budget\_slack & 2 & 80 & 0.88750 & 0.00000 & 0.01250 & 0.68178\\
+combined\_hard\_shift & minus\_budget\_slack & 3 & 80 & 0.87500 & 0.00000 & 0.01250 & 0.66247\\
+combined\_hard\_shift & minus\_budget\_slack & 4 & 80 & 0.90000 & 0.00000 & 0.00000 & 0.71904\\
+combined\_hard\_shift & minus\_budget\_slack & 5 & 80 & 0.82500 & 0.00000 & 0.01250 & 0.59668\\
+combined\_hard\_shift & minus\_budget\_slack & 6 & 80 & 0.86250 & 0.00000 & 0.02500 & 0.63148\\
+combined\_hard\_shift & minus\_budget\_slack & 7 & 80 & 0.86250 & 0.00000 & 0.00000 & 0.66196\\
+combined\_hard\_shift & minus\_budget\_slack & 8 & 80 & 0.85000 & 0.00000 & 0.01250 & 0.62958\\
+combined\_hard\_shift & minus\_budget\_slack & 9 & 80 & 0.85000 & 0.00000 & 0.00000 & 0.64503\\
+combined\_hard\_shift & minus\_branch\_entropy & 0 & 80 & 0.87500 & 0.00000 & 0.01250 & 0.66746\\
+combined\_hard\_shift & minus\_branch\_entropy & 1 & 80 & 0.83750 & 0.00000 & 0.01250 & 0.61431\\
+combined\_hard\_shift & minus\_branch\_entropy & 2 & 80 & 0.80000 & 0.00000 & 0.00000 & 0.57575\\
+combined\_hard\_shift & minus\_branch\_entropy & 3 & 80 & 0.75000 & 0.00000 & 0.00000 & 0.50547\\
+combined\_hard\_shift & minus\_branch\_entropy & 4 & 80 & 0.85000 & 0.00000 & 0.01250 & 0.63213\\
+combined\_hard\_shift & minus\_branch\_entropy & 5 & 80 & 0.87500 & 0.00000 & 0.01250 & 0.66806\\
+combined\_hard\_shift & minus\_branch\_entropy & 6 & 80 & 0.80000 & 0.00000 & 0.01250 & 0.55893\\
+combined\_hard\_shift & minus\_branch\_entropy & 7 & 80 & 0.85000 & 0.00000 & 0.01250 & 0.63102\\
+combined\_hard\_shift & minus\_branch\_entropy & 8 & 80 & 0.83750 & 0.00000 & 0.01250 & 0.61532\\
+combined\_hard\_shift & minus\_branch\_entropy & 9 & 80 & 0.80000 & 0.00000 & 0.02500 & 0.54514\\
+combined\_hard\_shift & minus\_calibration\_penalty & 0 & 80 & 0.86250 & 0.00000 & 0.05000 & 0.60355\\
+combined\_hard\_shift & minus\_calibration\_penalty & 1 & 80 & 0.85000 & 0.00000 & 0.00000 & 0.64474\\
+combined\_hard\_shift & minus\_calibration\_penalty & 2 & 80 & 0.77500 & 0.00000 & 0.02500 & 0.51070\\
+combined\_hard\_shift & minus\_calibration\_penalty & 3 & 80 & 0.83750 & 0.00000 & 0.01250 & 0.61233\\
+combined\_hard\_shift & minus\_calibration\_penalty & 4 & 80 & 0.87500 & 0.00000 & 0.01250 & 0.66646\\
+combined\_hard\_shift & minus\_calibration\_penalty & 5 & 80 & 0.70000 & 0.00000 & 0.03750 & 0.39181\\
+combined\_hard\_shift & minus\_calibration\_penalty & 6 & 80 & 0.82500 & 0.00000 & 0.01250 & 0.59390\\
+combined\_hard\_shift & minus\_calibration\_penalty & 7 & 80 & 0.78750 & 0.00000 & 0.00000 & 0.55635\\
+combined\_hard\_shift & minus\_calibration\_penalty & 8 & 80 & 0.88750 & 0.00000 & 0.00000 & 0.69940\\
+combined\_hard\_shift & minus\_calibration\_penalty & 9 & 80 & 0.93750 & 0.00000 & 0.00000 & 0.77155\\
+combined\_hard\_shift & risk\_only\_score & 0 & 80 & 0.68750 & 0.00000 & 0.00000 & 0.41577\\
+combined\_hard\_shift & risk\_only\_score & 1 & 80 & 0.66250 & 0.00000 & 0.02500 & 0.34808\\
+combined\_hard\_shift & risk\_only\_score & 2 & 80 & 0.60000 & 0.00000 & 0.02500 & 0.26343\\
+combined\_hard\_shift & risk\_only\_score & 3 & 80 & 0.81250 & 0.00000 & 0.02500 & 0.55941\\
+combined\_hard\_shift & risk\_only\_score & 4 & 80 & 0.71250 & 0.01250 & 0.01250 & 0.41895\\
+combined\_hard\_shift & risk\_only\_score & 5 & 80 & 0.68750 & 0.00000 & 0.00000 & 0.41631\\
+combined\_hard\_shift & risk\_only\_score & 6 & 80 & 0.72500 & 0.01250 & 0.02500 & 0.41900\\
+combined\_hard\_shift & risk\_only\_score & 7 & 80 & 0.67500 & 0.00000 & 0.03750 & 0.34519\\
+combined\_hard\_shift & risk\_only\_score & 8 & 80 & 0.67500 & 0.00000 & 0.01250 & 0.38087\\
+combined\_hard\_shift & risk\_only\_score & 9 & 80 & 0.70000 & 0.00000 & 0.05000 & 0.37135\\
+combined\_hard\_shift & expected\_utility\_only & 0 & 80 & 0.85000 & 0.00000 & 0.02500 & 0.61663\\
+combined\_hard\_shift & expected\_utility\_only & 1 & 80 & 0.88750 & 0.00000 & 0.00000 & 0.69983\\
+combined\_hard\_shift & expected\_utility\_only & 2 & 80 & 0.91250 & 0.00000 & 0.00000 & 0.73820\\
+combined\_hard\_shift & expected\_utility\_only & 3 & 80 & 0.80000 & 0.00000 & 0.02500 & 0.54398\\
+combined\_hard\_shift & expected\_utility\_only & 4 & 80 & 0.86250 & 0.01250 & 0.02500 & 0.61905\\
+combined\_hard\_shift & expected\_utility\_only & 5 & 80 & 0.80000 & 0.00000 & 0.03750 & 0.53622\\
+combined\_hard\_shift & expected\_utility\_only & 6 & 80 & 0.82500 & 0.00000 & 0.00000 & 0.60999\\
+combined\_hard\_shift & expected\_utility\_only & 7 & 80 & 0.82500 & 0.00000 & 0.00000 & 0.60907\\
+combined\_hard\_shift & expected\_utility\_only & 8 & 80 & 0.86250 & 0.00000 & 0.00000 & 0.66560\\
+combined\_hard\_shift & expected\_utility\_only & 9 & 80 & 0.82500 & 0.00000 & 0.00000 & 0.60981\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\section{Fixed-Risk Seed-Level Metrics}
+
+Fixed-risk coverage is the most submission-damaging result: non-oracle methods abstain at the strict 0.05 budget. The seed-level table below shows this is consistent across seeds rather than an averaging artifact.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.17\linewidth}cp{0.18\linewidth}ccccc}
+\caption{Seed-level fixed-risk metrics.}\label{tab:fixed-risk-seeds}\\
+\toprule
+Split & Budget & Method & Seed & Coverage & Fixed success & Executed success & False-safe\\
+\midrule
+\endfirsthead
+\caption[]{Seed-level fixed-risk metrics. (continued)}\\
+\toprule
+Split & Budget & Method & Seed & Coverage & Fixed success & Executed success & False-safe\\
+\midrule
+\endhead
+combined\_hard\_shift & 0.02 & Conformal filter & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Conformal filter & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned risk & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Learned EU & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & CVaR recovery & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Recover-v5 & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 0 & 0.09375 & 0.07812 & 0.83333 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 1 & 0.15625 & 0.15625 & 1.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 2 & 0.07812 & 0.06250 & 0.80000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 3 & 0.15625 & 0.15625 & 1.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 4 & 0.17188 & 0.17188 & 1.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 5 & 0.12500 & 0.09375 & 0.75000 & 0.12500\\
+combined\_hard\_shift & 0.02 & Oracle & 6 & 0.14062 & 0.10938 & 0.77778 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 7 & 0.17188 & 0.15625 & 0.90909 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 8 & 0.17188 & 0.17188 & 1.00000 & 0.00000\\
+combined\_hard\_shift & 0.02 & Oracle & 9 & 0.18750 & 0.17188 & 0.91667 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Conformal filter & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned risk & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Learned EU & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & CVaR recovery & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Recover-v5 & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Oracle & 0 & 0.84375 & 0.70312 & 0.83333 & 0.00000\\
+combined\_hard\_shift & 0.05 & Oracle & 1 & 0.87500 & 0.76562 & 0.87500 & 0.01786\\
+combined\_hard\_shift & 0.05 & Oracle & 2 & 0.81250 & 0.68750 & 0.84615 & 0.00000\\
+combined\_hard\_shift & 0.05 & Oracle & 3 & 0.78125 & 0.73438 & 0.94000 & 0.00000\\
+combined\_hard\_shift & 0.05 & Oracle & 4 & 0.87500 & 0.76562 & 0.87500 & 0.01786\\
+combined\_hard\_shift & 0.05 & Oracle & 5 & 0.81250 & 0.64062 & 0.78846 & 0.01923\\
+combined\_hard\_shift & 0.05 & Oracle & 6 & 0.82812 & 0.64062 & 0.77358 & 0.01887\\
+combined\_hard\_shift & 0.05 & Oracle & 7 & 0.90625 & 0.79688 & 0.87931 & 0.01724\\
+combined\_hard\_shift & 0.05 & Oracle & 8 & 0.82812 & 0.68750 & 0.83019 & 0.01887\\
+combined\_hard\_shift & 0.05 & Oracle & 9 & 0.93750 & 0.79688 & 0.85000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 3 & 0.23438 & 0.21875 & 0.93333 & 0.06667\\
+combined\_hard\_shift & 0.10 & Conformal filter & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Conformal filter & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 0 & 0.29688 & 0.25000 & 0.84211 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 1 & 0.35938 & 0.28125 & 0.78261 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 2 & 0.31250 & 0.23438 & 0.75000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 3 & 0.28125 & 0.23438 & 0.83333 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 4 & 0.34375 & 0.28125 & 0.81818 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 5 & 0.31250 & 0.26562 & 0.85000 & 0.05000\\
+combined\_hard\_shift & 0.10 & Learned risk & 6 & 0.42188 & 0.37500 & 0.88889 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 7 & 0.23438 & 0.21875 & 0.93333 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 8 & 0.31250 & 0.23438 & 0.75000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned risk & 9 & 0.43750 & 0.39062 & 0.89286 & 0.03571\\
+combined\_hard\_shift & 0.10 & Learned EU & 0 & 0.26562 & 0.25000 & 0.94118 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned EU & 1 & 0.28125 & 0.28125 & 1.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned EU & 2 & 0.25000 & 0.20312 & 0.81250 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned EU & 3 & 0.29688 & 0.21875 & 0.73684 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned EU & 4 & 0.29688 & 0.25000 & 0.84211 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned EU & 5 & 0.28125 & 0.23438 & 0.83333 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned EU & 6 & 0.39062 & 0.31250 & 0.80000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned EU & 7 & 0.21875 & 0.14062 & 0.64286 & 0.07143\\
+combined\_hard\_shift & 0.10 & Learned EU & 8 & 0.26562 & 0.23438 & 0.88235 & 0.00000\\
+combined\_hard\_shift & 0.10 & Learned EU & 9 & 0.35938 & 0.32812 & 0.91304 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 3 & 0.28125 & 0.23438 & 0.83333 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & CVaR recovery & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 0 & 0.37500 & 0.32812 & 0.87500 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 1 & 0.40625 & 0.35938 & 0.88462 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 2 & 0.39062 & 0.35938 & 0.92000 & 0.04000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 3 & 0.51562 & 0.43750 & 0.84848 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 4 & 0.50000 & 0.40625 & 0.81250 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 5 & 0.48438 & 0.37500 & 0.77419 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 6 & 0.56250 & 0.42188 & 0.75000 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 7 & 0.37500 & 0.32812 & 0.87500 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 8 & 0.40625 & 0.34375 & 0.84615 & 0.00000\\
+combined\_hard\_shift & 0.10 & Recover-v5 & 9 & 0.53125 & 0.45312 & 0.85294 & 0.00000\\
+combined\_hard\_shift & 0.10 & Oracle & 0 & 1.00000 & 0.78125 & 0.78125 & 0.00000\\
+combined\_hard\_shift & 0.10 & Oracle & 1 & 1.00000 & 0.89062 & 0.89062 & 0.01562\\
+combined\_hard\_shift & 0.10 & Oracle & 2 & 1.00000 & 0.85938 & 0.85938 & 0.00000\\
+combined\_hard\_shift & 0.10 & Oracle & 3 & 1.00000 & 0.95312 & 0.95312 & 0.00000\\
+combined\_hard\_shift & 0.10 & Oracle & 4 & 1.00000 & 0.87500 & 0.87500 & 0.03125\\
+combined\_hard\_shift & 0.10 & Oracle & 5 & 0.98438 & 0.76562 & 0.77778 & 0.03175\\
+combined\_hard\_shift & 0.10 & Oracle & 6 & 1.00000 & 0.78125 & 0.78125 & 0.01562\\
+combined\_hard\_shift & 0.10 & Oracle & 7 & 1.00000 & 0.89062 & 0.89062 & 0.01562\\
+combined\_hard\_shift & 0.10 & Oracle & 8 & 1.00000 & 0.82812 & 0.82812 & 0.01562\\
+combined\_hard\_shift & 0.10 & Oracle & 9 & 1.00000 & 0.85938 & 0.85938 & 0.00000\\
+combined\_hard\_shift & 0.20 & Conformal filter & 0 & 0.59375 & 0.45312 & 0.76316 & 0.02632\\
+combined\_hard\_shift & 0.20 & Conformal filter & 1 & 0.54688 & 0.48438 & 0.88571 & 0.02857\\
+combined\_hard\_shift & 0.20 & Conformal filter & 2 & 0.56250 & 0.50000 & 0.88889 & 0.00000\\
+combined\_hard\_shift & 0.20 & Conformal filter & 3 & 0.60938 & 0.57812 & 0.94872 & 0.02564\\
+combined\_hard\_shift & 0.20 & Conformal filter & 4 & 0.59375 & 0.54688 & 0.92105 & 0.02632\\
+combined\_hard\_shift & 0.20 & Conformal filter & 5 & 0.64062 & 0.51562 & 0.80488 & 0.00000\\
+combined\_hard\_shift & 0.20 & Conformal filter & 6 & 0.65625 & 0.62500 & 0.95238 & 0.02381\\
+combined\_hard\_shift & 0.20 & Conformal filter & 7 & 0.50000 & 0.37500 & 0.75000 & 0.00000\\
+combined\_hard\_shift & 0.20 & Conformal filter & 8 & 0.54688 & 0.53125 & 0.97143 & 0.00000\\
+combined\_hard\_shift & 0.20 & Conformal filter & 9 & 0.65625 & 0.56250 & 0.85714 & 0.02381\\
+combined\_hard\_shift & 0.20 & Learned risk & 0 & 0.82812 & 0.73438 & 0.88679 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned risk & 1 & 0.84375 & 0.68750 & 0.81481 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned risk & 2 & 0.79688 & 0.68750 & 0.86275 & 0.01961\\
+combined\_hard\_shift & 0.20 & Learned risk & 3 & 0.82812 & 0.62500 & 0.75472 & 0.01887\\
+combined\_hard\_shift & 0.20 & Learned risk & 4 & 0.84375 & 0.76562 & 0.90741 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned risk & 5 & 0.90625 & 0.78125 & 0.86207 & 0.03448\\
+combined\_hard\_shift & 0.20 & Learned risk & 6 & 0.85938 & 0.75000 & 0.87273 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned risk & 7 & 0.76562 & 0.70312 & 0.91837 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned risk & 8 & 0.79688 & 0.64062 & 0.80392 & 0.01961\\
+combined\_hard\_shift & 0.20 & Learned risk & 9 & 0.82812 & 0.70312 & 0.84906 & 0.03774\\
+combined\_hard\_shift & 0.20 & Learned EU & 0 & 0.78125 & 0.64062 & 0.82000 & 0.04000\\
+combined\_hard\_shift & 0.20 & Learned EU & 1 & 0.81250 & 0.79688 & 0.98077 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned EU & 2 & 0.78125 & 0.65625 & 0.84000 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned EU & 3 & 0.79688 & 0.60938 & 0.76471 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned EU & 4 & 0.78125 & 0.65625 & 0.84000 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned EU & 5 & 0.85938 & 0.70312 & 0.81818 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned EU & 6 & 0.84375 & 0.73438 & 0.87037 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned EU & 7 & 0.71875 & 0.54688 & 0.76087 & 0.04348\\
+combined\_hard\_shift & 0.20 & Learned EU & 8 & 0.79688 & 0.70312 & 0.88235 & 0.00000\\
+combined\_hard\_shift & 0.20 & Learned EU & 9 & 0.75000 & 0.70312 & 0.93750 & 0.00000\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 0 & 0.71875 & 0.56250 & 0.78261 & 0.02174\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 1 & 0.71875 & 0.54688 & 0.76087 & 0.02174\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 2 & 0.75000 & 0.59375 & 0.79167 & 0.00000\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 3 & 0.81250 & 0.59375 & 0.73077 & 0.03846\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 4 & 0.75000 & 0.68750 & 0.91667 & 0.00000\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 5 & 0.79688 & 0.65625 & 0.82353 & 0.00000\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 6 & 0.89062 & 0.75000 & 0.84211 & 0.00000\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 7 & 0.68750 & 0.45312 & 0.65909 & 0.02273\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 8 & 0.71875 & 0.57812 & 0.80435 & 0.02174\\
+combined\_hard\_shift & 0.20 & CVaR recovery & 9 & 0.87500 & 0.71875 & 0.82143 & 0.01786\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 0 & 0.89062 & 0.73438 & 0.82456 & 0.00000\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 1 & 0.89062 & 0.76562 & 0.85965 & 0.00000\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 2 & 0.89062 & 0.81250 & 0.91228 & 0.01754\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 3 & 0.87500 & 0.71875 & 0.82143 & 0.01786\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 4 & 0.79688 & 0.65625 & 0.82353 & 0.00000\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 5 & 0.90625 & 0.78125 & 0.86207 & 0.00000\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 6 & 0.93750 & 0.71875 & 0.76667 & 0.00000\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 7 & 0.89062 & 0.73438 & 0.82456 & 0.00000\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 8 & 0.85938 & 0.71875 & 0.83636 & 0.00000\\
+combined\_hard\_shift & 0.20 & Recover-v5 & 9 & 0.90625 & 0.71875 & 0.79310 & 0.03448\\
+combined\_hard\_shift & 0.20 & Oracle & 0 & 1.00000 & 0.78125 & 0.78125 & 0.00000\\
+combined\_hard\_shift & 0.20 & Oracle & 1 & 1.00000 & 0.89062 & 0.89062 & 0.01562\\
+combined\_hard\_shift & 0.20 & Oracle & 2 & 1.00000 & 0.85938 & 0.85938 & 0.00000\\
+combined\_hard\_shift & 0.20 & Oracle & 3 & 1.00000 & 0.95312 & 0.95312 & 0.00000\\
+combined\_hard\_shift & 0.20 & Oracle & 4 & 1.00000 & 0.87500 & 0.87500 & 0.03125\\
+combined\_hard\_shift & 0.20 & Oracle & 5 & 1.00000 & 0.78125 & 0.78125 & 0.03125\\
+combined\_hard\_shift & 0.20 & Oracle & 6 & 1.00000 & 0.78125 & 0.78125 & 0.01562\\
+combined\_hard\_shift & 0.20 & Oracle & 7 & 1.00000 & 0.89062 & 0.89062 & 0.01562\\
+combined\_hard\_shift & 0.20 & Oracle & 8 & 1.00000 & 0.82812 & 0.82812 & 0.01562\\
+combined\_hard\_shift & 0.20 & Oracle & 9 & 1.00000 & 0.85938 & 0.85938 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Conformal filter & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned risk & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Learned EU & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & CVaR recovery & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Recover-v5 & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 0 & 0.10938 & 0.04688 & 0.42857 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 1 & 0.01562 & 0.01562 & 1.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 4 & 0.01562 & 0.01562 & 1.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 5 & 0.03125 & 0.01562 & 0.50000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 7 & 0.03125 & 0.03125 & 1.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 8 & 0.04688 & 0.04688 & 1.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.02 & Oracle & 9 & 0.01562 & 0.01562 & 1.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Conformal filter & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned risk & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Learned EU & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & CVaR recovery & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 3 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Recover-v5 & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 0 & 0.73438 & 0.57812 & 0.78723 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 1 & 0.60938 & 0.51562 & 0.84615 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 2 & 0.54688 & 0.46875 & 0.85714 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 3 & 0.56250 & 0.42188 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 4 & 0.73438 & 0.62500 & 0.85106 & 0.02128\\
+adversarial\_compound\_shift & 0.05 & Oracle & 5 & 0.56250 & 0.40625 & 0.72222 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 6 & 0.62500 & 0.48438 & 0.77500 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 7 & 0.54688 & 0.46875 & 0.85714 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 8 & 0.51562 & 0.40625 & 0.78788 & 0.00000\\
+adversarial\_compound\_shift & 0.05 & Oracle & 9 & 0.59375 & 0.51562 & 0.86842 & 0.02632\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 3 & 0.10938 & 0.09375 & 0.85714 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Conformal filter & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 0 & 0.26562 & 0.18750 & 0.70588 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 1 & 0.23438 & 0.17188 & 0.73333 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 2 & 0.29688 & 0.20312 & 0.68421 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 3 & 0.31250 & 0.25000 & 0.80000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 4 & 0.28125 & 0.23438 & 0.83333 & 0.05556\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 5 & 0.18750 & 0.14062 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 6 & 0.40625 & 0.35938 & 0.88462 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 7 & 0.21875 & 0.20312 & 0.92857 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 8 & 0.17188 & 0.12500 & 0.72727 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned risk & 9 & 0.25000 & 0.21875 & 0.87500 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 0 & 0.25000 & 0.18750 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 1 & 0.21875 & 0.20312 & 0.92857 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 2 & 0.25000 & 0.18750 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 3 & 0.26562 & 0.20312 & 0.76471 & 0.05882\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 4 & 0.26562 & 0.18750 & 0.70588 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 5 & 0.18750 & 0.17188 & 0.91667 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 6 & 0.39062 & 0.34375 & 0.88000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 7 & 0.21875 & 0.15625 & 0.71429 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 8 & 0.12500 & 0.09375 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Learned EU & 9 & 0.23438 & 0.21875 & 0.93333 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 0 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 1 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 2 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 3 & 0.17188 & 0.14062 & 0.81818 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 4 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 5 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 6 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 7 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 8 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & CVaR recovery & 9 & 0.00000 & 0.00000 & 0.00000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 0 & 0.29688 & 0.21875 & 0.73684 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 1 & 0.37500 & 0.28125 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 2 & 0.39062 & 0.23438 & 0.60000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 3 & 0.39062 & 0.25000 & 0.64000 & 0.04000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 4 & 0.39062 & 0.29688 & 0.76000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 5 & 0.43750 & 0.32812 & 0.75000 & 0.03571\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 6 & 0.48438 & 0.35938 & 0.74194 & 0.03226\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 7 & 0.31250 & 0.23438 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 8 & 0.34375 & 0.25000 & 0.72727 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Recover-v5 & 9 & 0.43750 & 0.34375 & 0.78571 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Oracle & 0 & 1.00000 & 0.81250 & 0.81250 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Oracle & 1 & 0.98438 & 0.84375 & 0.85714 & 0.01587\\
+adversarial\_compound\_shift & 0.10 & Oracle & 2 & 1.00000 & 0.85938 & 0.85938 & 0.01562\\
+adversarial\_compound\_shift & 0.10 & Oracle & 3 & 1.00000 & 0.76562 & 0.76562 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Oracle & 4 & 0.98438 & 0.81250 & 0.82540 & 0.01587\\
+adversarial\_compound\_shift & 0.10 & Oracle & 5 & 1.00000 & 0.76562 & 0.76562 & 0.01562\\
+adversarial\_compound\_shift & 0.10 & Oracle & 6 & 1.00000 & 0.78125 & 0.78125 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Oracle & 7 & 1.00000 & 0.87500 & 0.87500 & 0.01562\\
+adversarial\_compound\_shift & 0.10 & Oracle & 8 & 1.00000 & 0.78125 & 0.78125 & 0.00000\\
+adversarial\_compound\_shift & 0.10 & Oracle & 9 & 0.98438 & 0.82812 & 0.84127 & 0.01587\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 0 & 0.53125 & 0.37500 & 0.70588 & 0.02941\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 1 & 0.42188 & 0.31250 & 0.74074 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 2 & 0.48438 & 0.28125 & 0.58065 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 3 & 0.46875 & 0.35938 & 0.76667 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 4 & 0.59375 & 0.48438 & 0.81579 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 5 & 0.46875 & 0.35938 & 0.76667 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 6 & 0.62500 & 0.40625 & 0.65000 & 0.05000\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 7 & 0.50000 & 0.34375 & 0.68750 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 8 & 0.39062 & 0.26562 & 0.68000 & 0.04000\\
+adversarial\_compound\_shift & 0.20 & Conformal filter & 9 & 0.68750 & 0.50000 & 0.72727 & 0.04545\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 0 & 0.81250 & 0.64062 & 0.78846 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 1 & 0.73438 & 0.54688 & 0.74468 & 0.04255\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 2 & 0.87500 & 0.57812 & 0.66071 & 0.03571\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 3 & 0.82812 & 0.70312 & 0.84906 & 0.01887\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 4 & 0.81250 & 0.60938 & 0.75000 & 0.01923\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 5 & 0.71875 & 0.57812 & 0.80435 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 6 & 0.89062 & 0.78125 & 0.87719 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 7 & 0.79688 & 0.67188 & 0.84314 & 0.01961\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 8 & 0.65625 & 0.59375 & 0.90476 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned risk & 9 & 0.82812 & 0.65625 & 0.79245 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 0 & 0.75000 & 0.56250 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 1 & 0.73438 & 0.59375 & 0.80851 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 2 & 0.81250 & 0.59375 & 0.73077 & 0.01923\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 3 & 0.76562 & 0.59375 & 0.77551 & 0.04082\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 4 & 0.75000 & 0.53125 & 0.70833 & 0.02083\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 5 & 0.67188 & 0.57812 & 0.86047 & 0.02326\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 6 & 0.79688 & 0.65625 & 0.82353 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 7 & 0.75000 & 0.60938 & 0.81250 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 8 & 0.62500 & 0.54688 & 0.87500 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Learned EU & 9 & 0.76562 & 0.65625 & 0.85714 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 0 & 0.64062 & 0.48438 & 0.75610 & 0.02439\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 1 & 0.60938 & 0.37500 & 0.61538 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 2 & 0.62500 & 0.43750 & 0.70000 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 3 & 0.67188 & 0.50000 & 0.74419 & 0.02326\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 4 & 0.73438 & 0.51562 & 0.70213 & 0.02128\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 5 & 0.68750 & 0.54688 & 0.79545 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 6 & 0.78125 & 0.48438 & 0.62000 & 0.04000\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 7 & 0.71875 & 0.48438 & 0.67391 & 0.02174\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 8 & 0.67188 & 0.50000 & 0.74419 & 0.02326\\
+adversarial\_compound\_shift & 0.20 & CVaR recovery & 9 & 0.84375 & 0.65625 & 0.77778 & 0.01852\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 0 & 0.81250 & 0.60938 & 0.75000 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 1 & 0.78125 & 0.59375 & 0.76000 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 2 & 0.84375 & 0.60938 & 0.72222 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 3 & 0.73438 & 0.50000 & 0.68085 & 0.02128\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 4 & 0.78125 & 0.57812 & 0.74000 & 0.04000\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 5 & 0.78125 & 0.60938 & 0.78000 & 0.02000\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 6 & 0.82812 & 0.67188 & 0.81132 & 0.01887\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 7 & 0.78125 & 0.64062 & 0.82000 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 8 & 0.75000 & 0.54688 & 0.72917 & 0.02083\\
+adversarial\_compound\_shift & 0.20 & Recover-v5 & 9 & 0.87500 & 0.64062 & 0.73214 & 0.03571\\
+adversarial\_compound\_shift & 0.20 & Oracle & 0 & 1.00000 & 0.81250 & 0.81250 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Oracle & 1 & 1.00000 & 0.85938 & 0.85938 & 0.01562\\
+adversarial\_compound\_shift & 0.20 & Oracle & 2 & 1.00000 & 0.85938 & 0.85938 & 0.01562\\
+adversarial\_compound\_shift & 0.20 & Oracle & 3 & 1.00000 & 0.76562 & 0.76562 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Oracle & 4 & 1.00000 & 0.82812 & 0.82812 & 0.01562\\
+adversarial\_compound\_shift & 0.20 & Oracle & 5 & 1.00000 & 0.76562 & 0.76562 & 0.01562\\
+adversarial\_compound\_shift & 0.20 & Oracle & 6 & 1.00000 & 0.78125 & 0.78125 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Oracle & 7 & 1.00000 & 0.87500 & 0.87500 & 0.01562\\
+adversarial\_compound\_shift & 0.20 & Oracle & 8 & 1.00000 & 0.78125 & 0.78125 & 0.00000\\
+adversarial\_compound\_shift & 0.20 & Oracle & 9 & 1.00000 & 0.84375 & 0.84375 & 0.01562\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\section{Full Prior-Work Pressure Table}
+
+Table~\ref{tab:prior-work} lists the highest-ranked hostile prior-work records used to bound the novelty claim. The point is not to claim that all are direct baselines; the point is to make the surrounding field visible enough that generic uncertainty or feasibility-score claims cannot pass as novelty.
+
+\begin{center}
+\scriptsize
+\begin{longtable}{p{0.12\linewidth}p{0.42\linewidth}cp{0.25\linewidth}c}
+\caption{Hostile prior-work pressure from the local deep-read pool.}\label{tab:prior-work}\\
+\toprule
+Citation & Title & Year & Venue & Hostile score\\
+\midrule
+\endfirsthead
+\caption[]{Hostile prior-work pressure from the local deep-read pool. (continued)}\\
+\toprule
+Citation & Title & Year & Venue & Hostile score\\
+\midrule
+\endhead
+\citep{pool82_01} & An incremental constraint-based framework for task and motion planning & 2018 & The International Journal of Robotics Research & 35.577\\
+\citep{pool82_02} & XFlowMP: Task-Conditioned Motion Fields for Generative Robot Planning with Schrodinger Bridges & 2025 & arXiv & 35.850\\
+\citep{pool82_03} & Combined Task and Motion Planning via Sketch Decompositions & 2024 & Proceedings of the International Conference on Automated Planning and Scheduling & 34.450\\
+\citep{pool82_04} & Representation, learning, and planning algorithms for geometric task and motion planning & 2022 & The International Journal of Robotics Research & 33.329\\
+\citep{pool82_05} & A Hybrid Approach to Intricate Motion, Manipulation and Task Planning & 2009 & The International Journal of Robotics Research & 26.918\\
+\citep{pool82_06} & Socially intelligent task and motion planning for human-robot interaction & 2020 & arXiv & 31.900\\
+\citep{pool82_07} & Extended Tree Search for Robot Task and Motion Planning & 2021 & arXiv & 30.700\\
+\citep{pool82_08} & Learning to guide task and motion planning using score-space representation & 2019 & The International Journal of Robotics Research & 30.281\\
+\citep{pool82_09} & AND/OR net representation for robotic task sequence planning & 1998 & IEEE Transactions on Systems Man and Cybernetics Part C (Applications and Reviews) & 26.066\\
+\citep{pool82_10} & Contingent Task and Motion Planning under Uncertainty for Human-Robot Interactions & 2020 & Applied Sciences & 31.670\\
+\citep{pool82_11} & Discovering State and Action Abstractions for Generalized Task and Motion Planning & 2022 & Proceedings of the AAAI Conference on Artificial Intelligence & 30.592\\
+\citep{pool82_12} & Sequence-Based Plan Feasibility Prediction for Efficient Task and Motion Planning & 2023 & Robotics: Science and Systems XIX & 29.217\\
+\citep{pool82_13} & Predefined-Time Convergent Neural Solution to Cyclical Motion Planning of Redundant Robots Under Physical Constraints & 2019 & IEEE Transactions on Industrial Electronics & 26.213\\
+\citep{pool82_14} & Kinodynamic Task and Motion Planning using VLM-guided and Interleaved Sampling & 2025 & arXiv & 31.150\\
+\citep{pool82_15} & Combined task and motion planning through an extensible planner-independent interface layer & 2014 & 2014 IEEE International Conference on Robotics and Automation (ICRA) & 29.042\\
+\citep{pool82_16} & Learning Feasibility for Task and Motion Planning in Tabletop Environments & 2019 & IEEE Robotics and Automation Letters & 29.030\\
+\citep{pool82_17} & Admissible Abstractions for Near-optimal Task and Motion Planning & 2018 & Proceedings of the Twenty-Seventh International Joint Conference on Artificial Intelligence & 28.967\\
+\citep{pool82_18} & Temporal Task and Motion Planning with Metric Time for Multiple Object Navigation & 2025 & Proceedings of the AAAI Conference on Artificial Intelligence & 30.950\\
+\citep{pool82_19} & Robust feedback motion planning via contraction theory & 2023 & The International Journal of Robotics Research & 29.917\\
+\citep{pool82_20} & Unified robot task and motion planning with extended planner using ROS simulator & 2022 & Journal of King Saud University - Computer and Information Sciences & 28.842\\
+\citep{pool82_21} & 3D-CNN Based Heuristic Guided Task-Space Planner for Faster Motion Planning & 2020 & 2020 IEEE International Conference on Robotics and Automation (ICRA) & 28.809\\
+\citep{pool82_22} & STAMP: Differentiable Task and Motion Planning via Stein Variational Gradient Descent & 2023 & arXiv & 29.750\\
+\citep{pool82_23} & AutoTAMP: Autoregressive Task and Motion Planning with LLMs as Translators and Checkers & 2023 & arXiv & 28.750\\
+\citep{pool82_24} & Dynamic event-triggered integrated task and motion planning for process-aware source seeking & 2024 & Autonomous Robots & 28.750\\
+\citep{pool82_25} & Randomized multi-modal motion planning for a humanoid robot manipulation task & 2011 & The International Journal of Robotics Research & 25.648\\
+\citep{pool82_26} & Kinodynamic Motion Planning for Collaborative Object Transportation by Multiple Mobile Manipulators & 2025 & Journal of Mechanisms and Robotics & 28.643\\
+\citep{pool82_27} & Incorporating Motion Planning Feasibility Considerations during Task-Agent Assignment to Perform Complex Tasks Using Mobile Manipulators & 2020 & 2020 IEEE International Conference on Robotics and Automation (ICRA) & 28.617\\
+\citep{pool82_28} & Technical Report: A Hierarchical Deliberative-Reactive System Architecture for Task and Motion Planning in Partially Known Environments & 2022 & arXiv & 29.550\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{center}
+
+\bibliographystyle{iclr2026_conference}
+
+\bibliography{references}
 
 \end{document}
