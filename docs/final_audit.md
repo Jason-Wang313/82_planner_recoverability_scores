@@ -26,3 +26,19 @@
 11. PDF gate: `paper/main.pdf` rebuilt after float-placement cleanup, then copied to `C:/Users/wangz/Downloads/82.pdf`.
 12. Artifact gate: `C:/Users/wangz/Downloads/82.pdf` SHA256 is `CB79882533BE0A5DA119C783411BE47C2534307987372ADD8B39C7509595140E`; `C:/Users/wangz/Desktop/82.pdf` is absent.
 13. Final decision: KILL_ARCHIVE. The paper is useful as a reproducible negative diagnostic, but it is not ICLR-main-ready and should not be reframed as a positive method paper.
+
+## 2026-06-21 Expanded-Standard v5 Audit
+
+1. Plan-first requirement: satisfied by `docs/paper82_expanded_submission_plan_20260621.md` before the runner was replaced.
+2. Code gate: `python -m py_compile src/run_experiment.py scripts/generate_manuscript.py scripts/validate_submission_artifacts.py` passed.
+3. Experiment gate: `python src/run_experiment.py` completed with terminal recommendation KILL_ARCHIVE.
+4. CSV integrity gate: audited 74,880 main rollout rows, 5,760 dataset rows, 1,170 seed-metric rows, 1,521 aggregate-metric rows, 378 paired rows, 130 hard-regime seed rows, 169 hard-regime aggregate rows, 42 hard-regime paired rows, 16,000 ablation rows, 94,080 stress rows, 30,720 fixed-risk rows, and 24 negative cases.
+5. Decisive aggregate: on the hard-regime aggregate, `recoverability_score_planner_v5` reaches 0.88711 +/- 0.00776 goal success, below `learned_expected_utility` at 0.92305 +/- 0.00917.
+6. Paired statistics: recoverability v5 minus learned expected utility is -0.03594 +/- 0.01288 with lower95 -0.04882 and 0/10 better seeds.
+7. Safety gate: v5 safety is low in absolute terms, but it does not beat the strongest safety/utility baseline decisively enough to rescue the paper.
+8. Ablation gate: failed because central removals match or beat the full method on success and safety tradeoffs.
+9. Fixed-risk gate: failed because non-oracle coverage at the 0.05 budget is zero on both hard fixed-risk splits.
+10. Stress gate: failed because maximum combined stress favors learned expected utility 0.58750 over v5 0.51562.
+11. PDF gate: generated a 28-page ICLR-style PDF with bright boxed citation links, rendered representative PNG pages for visual QA, and validated artifact placement.
+12. Artifact gate: `C:/Users/wangz/Downloads/82.pdf` SHA256 is `D32F6F11DA77897EC8671FAE3D9860B1474AD6A5091A9F7034BDB33F77BB6249`; `C:/Users/wangz/Desktop/82.pdf` is absent.
+13. Final decision: KILL_ARCHIVE. The expanded paper is stronger, but it is not ICLR-main-ready and should not be submitted as a positive method paper.

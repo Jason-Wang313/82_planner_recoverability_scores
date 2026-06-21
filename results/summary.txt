@@ -1,34 +1,88 @@
-Paper 82 planner_recoverability_scores v4 rebuild
+Paper 82 planner_recoverability_scores v5 expanded rebuild
 Terminal recommendation: KILL_ARCHIVE
-Reason: local task-and-motion recoverability benchmark exists, but no robot hardware or external high-fidelity benchmark is available.
-Main rollout rows: 11760
-Ablation rollout rows: 2058
-Stress rollout rows: 25200
-Seeds: [0, 1, 2, 3, 4, 5, 6]
+Reason: CPU-only local TAMP recoverability benchmark expanded with theory, hard aggregates, ablations, stress, and fixed-risk deployment; no robot hardware or external high-fidelity benchmark is present.
+Main rollout rows: 74880
+Ablation rollout rows: 16000
+Stress rollout rows: 94080
+Fixed-risk rollout rows: 30720
+Negative cases: 24
+Seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-Combined hard-shift goal success:
-recoverability_score_planner=0.85034 ci95=0.04163
-contingent_replanner=0.84353 ci95=0.04055
-robust_margin_planner=0.34013 ci95=0.04745
-learned_failure_classifier=0.87755 ci95=0.04128
-expected_cost_replanner=0.84013 ci95=0.04854
-oracle_recoverability_upper_bound=0.87415 ci95=0.04037
-irreversible proposed=0.00680, contingent=0.00000
-damage proposed=0.01701, contingent=0.01020
-paired goal-success diff vs contingent=0.00680 ci95=0.02828
+Hard-regime aggregate goal success:
+recoverability_score_planner_v5=0.88711 ci95=0.00776 safety_utility=0.69069 irreversible=0.00039 damage=0.00723
+contingent_replanner=0.78692 ci95=0.01126 safety_utility=0.54354 irreversible=0.00000 damage=0.00801
+conformal_failure_filter=0.89980 ci95=0.00504 safety_utility=0.71269 irreversible=0.00019 damage=0.00762
+learned_failure_classifier=0.90469 ci95=0.00643 safety_utility=0.72126 irreversible=0.00000 damage=0.00586
+learned_expected_utility=0.92305 ci95=0.00917 safety_utility=0.74972 irreversible=0.00000 damage=0.00508
+cvar_recovery_planner=0.88164 ci95=0.00858 safety_utility=0.67980 irreversible=0.00039 damage=0.00996
+oracle_recoverability_upper_bound=0.92891 ci95=0.00695 safety_utility=0.75825 irreversible=0.00000 damage=0.00586
 
-Ablation combined_hard_shift:
-full_recoverability_score goal_success=0.85034 ci95=0.04163 recovery_success=0.74422 irreversible=0.00680 damage=0.01701 cost=1.78854
-minus_recovery_success goal_success=0.84353 ci95=0.04538 recovery_success=0.65498 irreversible=0.00680 damage=0.02721 cost=1.79597
-minus_recovery_cost goal_success=0.84694 ci95=0.03791 recovery_success=0.72313 irreversible=0.00680 damage=0.02041 cost=1.79326
-minus_irreversible_trap_penalty goal_success=0.86734 ci95=0.04055 recovery_success=0.88617 irreversible=0.00000 damage=0.01020 cost=1.77835
-minus_diagnostic_value goal_success=0.83673 ci95=0.04603 recovery_success=0.59286 irreversible=0.00680 damage=0.03401 cost=1.81800
-minus_failure_probability goal_success=0.86394 ci95=0.03333 recovery_success=0.83333 irreversible=0.00340 damage=0.01361 cost=1.78048
-risk_only_score goal_success=0.68708 ci95=0.04823 recovery_success=0.58810 irreversible=0.00680 damage=0.03061 cost=1.95828
+Decision gates:
+best_reference: learned_expected_utility
+best_reference_success: 0.92305
+proposed_hard_success: 0.88711
+hard_margin: -0.03594000000000008
+paired_lower95_vs_best: -0.04882
+safety_reference: learned_expected_utility
+safety_reference_sum: 0.00508
+proposed_safety_sum: 0.00762
+margin_gate: False
+paired_gate: False
+safety_gate: True
+ablation_gate: False
+fixed_risk_gate: False
+stress_gate: False
 
-Combined stress level 1.0:
-robust_margin_planner goal_success=0.27976 ci95=0.07286 irreversible=0.00000 damage=0.04762 cost=2.34804
-contingent_replanner goal_success=0.75000 ci95=0.06902 irreversible=0.00595 damage=0.02381 cost=1.92670
-learned_failure_classifier goal_success=0.84524 ci95=0.06099 irreversible=0.00000 damage=0.01191 cost=1.80524
-recoverability_score_planner goal_success=0.85119 ci95=0.05872 irreversible=0.00595 damage=0.01190 cost=1.80996
-oracle_recoverability_upper_bound goal_success=0.84524 ci95=0.06099 irreversible=0.00000 damage=0.01191 cost=1.80576
+Pairwise hard aggregate versus strongest non-oracle:
+goal_success diff=-0.03594 ci95=0.01288 lower95=-0.04882 better_seeds=0/10
+recovery_success diff=0.00188 ci95=0.03609 lower95=-0.03420 better_seeds=4/10
+irreversible_failure diff=0.00039 ci95=0.00051 lower95=-0.00012 better_seeds=0/10
+damage diff=0.00215 ci95=0.00264 lower95=-0.00050 better_seeds=4/10
+total_cost diff=0.07953 ci95=0.00856 lower95=0.07097 better_seeds=0/10
+calibration_error diff=-0.02803 ci95=0.01159 lower95=-0.03962 better_seeds=9/10
+safety_utility diff=-0.05903 ci95=0.01864 lower95=-0.07767 better_seeds=0/10
+
+Ablation results:
+combined_hard_shift full_recoverability_score_v5 goal_success=0.83625 ci95=0.01948 irreversible=0.00125 damage=0.01000 safety_utility=0.61276
+combined_hard_shift minus_recovery_success goal_success=0.82375 ci95=0.02670 irreversible=0.00125 damage=0.02000 safety_utility=0.58396
+combined_hard_shift minus_recovery_cost goal_success=0.84750 ci95=0.01926 irreversible=0.00000 damage=0.02500 safety_utility=0.61175
+combined_hard_shift minus_irreversible_trap_penalty goal_success=0.83125 ci95=0.02457 irreversible=0.00000 damage=0.00875 safety_utility=0.61011
+combined_hard_shift minus_damage_penalty goal_success=0.84375 ci95=0.02429 irreversible=0.00000 damage=0.01750 safety_utility=0.61647
+combined_hard_shift minus_budget_slack goal_success=0.85500 ci95=0.01833 irreversible=0.00000 damage=0.00875 safety_utility=0.64157
+combined_hard_shift minus_branch_entropy goal_success=0.82750 ci95=0.02445 irreversible=0.00000 damage=0.01125 safety_utility=0.60136
+combined_hard_shift minus_calibration_penalty goal_success=0.83375 ci95=0.04133 irreversible=0.00000 damage=0.01500 safety_utility=0.60508
+combined_hard_shift risk_only_score goal_success=0.69375 ci95=0.03332 irreversible=0.00250 damage=0.02125 safety_utility=0.39384
+combined_hard_shift expected_utility_only goal_success=0.84500 ci95=0.02287 irreversible=0.00125 damage=0.01125 safety_utility=0.62484
+adversarial_compound_shift full_recoverability_score_v5 goal_success=0.72750 ci95=0.02499 irreversible=0.00000 damage=0.02125 safety_utility=0.45055
+adversarial_compound_shift minus_recovery_success goal_success=0.71500 ci95=0.03403 irreversible=0.00500 damage=0.01500 safety_utility=0.43325
+adversarial_compound_shift minus_recovery_cost goal_success=0.71750 ci95=0.03371 irreversible=0.00125 damage=0.03000 safety_utility=0.42419
+adversarial_compound_shift minus_irreversible_trap_penalty goal_success=0.73375 ci95=0.03408 irreversible=0.00000 damage=0.01625 safety_utility=0.46507
+adversarial_compound_shift minus_damage_penalty goal_success=0.75875 ci95=0.02759 irreversible=0.00125 damage=0.01500 safety_utility=0.50048
+adversarial_compound_shift minus_budget_slack goal_success=0.68500 ci95=0.03221 irreversible=0.00125 damage=0.02000 safety_utility=0.39147
+adversarial_compound_shift minus_branch_entropy goal_success=0.73625 ci95=0.03172 irreversible=0.00000 damage=0.01000 safety_utility=0.47623
+adversarial_compound_shift minus_calibration_penalty goal_success=0.73125 ci95=0.02259 irreversible=0.00000 damage=0.01875 safety_utility=0.45930
+adversarial_compound_shift risk_only_score goal_success=0.55000 ci95=0.02608 irreversible=0.00375 damage=0.02625 safety_utility=0.18952
+adversarial_compound_shift expected_utility_only goal_success=0.76375 ci95=0.01982 irreversible=0.00250 damage=0.01750 safety_utility=0.50259
+
+Combined stress level 1.50:
+robust_margin_planner goal_success=0.09688 ci95=0.03222 irreversible=0.05625 damage=0.13125 safety_utility=-0.67746
+contingent_replanner goal_success=0.29688 ci95=0.03196 irreversible=0.00000 damage=0.05937 safety_utility=-0.20394
+learned_failure_classifier goal_success=0.50625 ci95=0.06246 irreversible=0.00313 damage=0.05312 safety_utility=0.09506
+learned_expected_utility goal_success=0.58750 ci95=0.05973 irreversible=0.00000 damage=0.03750 safety_utility=0.23198
+cvar_recovery_planner goal_success=0.44688 ci95=0.03658 irreversible=0.01250 damage=0.03125 safety_utility=0.02236
+recoverability_score_planner_v5 goal_success=0.51562 ci95=0.05864 irreversible=0.00625 damage=0.03750 safety_utility=0.12029
+oracle_recoverability_upper_bound goal_success=0.62500 ci95=0.06584 irreversible=0.00000 damage=0.04688 safety_utility=0.27470
+
+Fixed-risk budget 0.05:
+combined_hard_shift conformal_failure_filter coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+combined_hard_shift learned_failure_classifier coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+combined_hard_shift learned_expected_utility coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+combined_hard_shift cvar_recovery_planner coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+combined_hard_shift recoverability_score_planner_v5 coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+combined_hard_shift oracle_recoverability_upper_bound coverage=0.85000 fixed_risk_success=0.72187 executed_success=0.84910 false_safe_rate=0.01099 damage=0.01099
+adversarial_compound_shift conformal_failure_filter coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+adversarial_compound_shift learned_failure_classifier coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+adversarial_compound_shift learned_expected_utility coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+adversarial_compound_shift cvar_recovery_planner coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+adversarial_compound_shift recoverability_score_planner_v5 coverage=0.00000 fixed_risk_success=0.00000 executed_success=0.00000 false_safe_rate=0.00000 damage=0.00000
+adversarial_compound_shift oracle_recoverability_upper_bound coverage=0.60313 fixed_risk_success=0.48906 executed_success=0.81022 false_safe_rate=0.00476 damage=0.00476

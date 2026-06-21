@@ -61,3 +61,27 @@ The full benchmark was rerun without reducing seeds, baselines, ablations, or st
 - Desktop PDF: absent.
 
 The decisive negative evidence did not change: learned failure classification beats the proposed recoverability score on the main split, paired gain over contingent replanning is non-decisive, and ablations still contradict the proposed score decomposition.
+
+## 2026-06-21 Expanded-Standard v5 Audit
+
+The paper was rebuilt under the expanded 25+ page submission-readiness standard. The result remains KILL_ARCHIVE.
+
+- Code compile: passed.
+- Main rows: 74,880.
+- Dataset rows: 5,760.
+- Seed metric rows: 1,170.
+- Aggregate metric rows: 1,521.
+- Paired rows: 378.
+- Hard-regime aggregate rows: 169.
+- Hard-regime paired rows: 42.
+- Ablation rows: 16,000.
+- Stress rows: 94,080.
+- Fixed-risk rows: 30,720.
+- Negative cases: 24.
+- Seeds: 0 through 9.
+- PDF: rebuilt at `C:/Users/wangz/Downloads/82.pdf`.
+- PDF pages: 28.
+- PDF SHA256: `D32F6F11DA77897EC8671FAE3D9860B1474AD6A5091A9F7034BDB33F77BB6249`.
+- Desktop PDF: absent.
+
+The decisive negative evidence is stronger after v5: `recoverability_score_planner_v5` loses hard-regime aggregate success to `learned_expected_utility`, the paired lower95 is negative, ablations match or beat the full score, fixed-risk coverage collapses at budget 0.05, maximum combined stress is dominated by learned expected utility, and no real robot or accepted high-fidelity external benchmark exists.
